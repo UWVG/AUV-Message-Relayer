@@ -1,0 +1,3 @@
+[submodule "Drivers/P30/ping-cpp"]
+	path = Drivers/P30/ping-cpp
+	url = git@github.com:bluerobotics/ping-cpp
