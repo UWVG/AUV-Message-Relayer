@@ -34,3 +34,7 @@
 # Debug and Release
 Debug/*
 Release/*
+*.launch
+
+# CubeIDE
+.settings/*
