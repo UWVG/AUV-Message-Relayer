@@ -17,6 +17,7 @@
   ******************************************************************************
   */
 /* Define to prevent recursive inclusion -------------------------------------*/
+
 #ifndef __USART_H__
 #define __USART_H__
 
@@ -32,12 +33,14 @@ extern "C" {
 /* USER CODE END Includes */
 
 extern UART_HandleTypeDef huart1;
+extern UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */
 
 void MX_USART1_UART_Init(void);
+void MX_USART2_UART_Init(void);
 
 /* USER CODE BEGIN Prototypes */
 
