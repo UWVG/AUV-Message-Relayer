@@ -1,3 +1,6 @@
 [submodule "Drivers/P30/ping-cpp"]
 	path = Drivers/P30/ping-cpp
 	url = git@github.com:bluerobotics/ping-cpp
+[submodule "Drivers/ROS_Serial/ros_lib"]
+	path = Drivers/ROS_Serial/ros_lib
+	url = git@github.com:UWVG/ros_lib
