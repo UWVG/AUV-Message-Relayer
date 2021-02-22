@@ -33,6 +33,8 @@ public:
 	virtual uint16_t readByte(){return 256;};
 
 	virtual uint32_t get_tick(){return 0;};
+
+	virtual uint8_t init(){return 1;};
 };
 
 #endif /* P30_P30DEVICE_H_ */

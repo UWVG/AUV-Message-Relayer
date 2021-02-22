@@ -7,6 +7,16 @@
 
 #include "P30.h"
 #include "usart.h"
+
+#ifdef USE_FREERTOS_DELAY
+extern "C"{
+void vTaskDelay(const uint32_t);
+}
+#define P30_Delay(x) vTaskDelay(x)
+#else
+#define P30_Delay(x) HAL_Delay(x)
+#endif
+
 P30::P30(P30Device* device) : p30Device{ device } {
 	// TODO Auto-generated constructor stub
 
@@ -16,38 +26,42 @@ P30::~P30() {
 	// TODO Auto-generated destructor stub
 }
 
-bool P30::initialize(uint16_t ping_interval_ms)
+uint8_t P30::initialize(uint16_t ping_interval_ms)
 {
+		while(p30Device->init())
+		{
+			P30_Delay(1000);
+		}
 		while(!request(PingEnumNamespace::PingMessageId::PING1D_DEVICE_ID, 1000))
 		{
 //				return false;
-			HAL_Delay(100);
+			P30_Delay(100);
 		}
 		HAL_Delay(100);
 		while(!request(PingEnumNamespace::PingMessageId::PING1D_FIRMWARE_VERSION, 1000))
 		{
 //				return false;
-			HAL_Delay(100);
+			P30_Delay(100);
 		}
 		HAL_Delay(100);
 		while(!request(PingEnumNamespace::PingMessageId::PING1D_VOLTAGE_5, 1000))
 		{
 //				return false;
-			HAL_Delay(100);
+			P30_Delay(100);
 		}
 		HAL_Delay(100);
 		while(!request(PingEnumNamespace::PingMessageId::PING1D_PROCESSOR_TEMPERATURE, 1000))
 		{
 //				return false;
-			HAL_Delay(100);
+			P30_Delay(100);
 		}
-		HAL_Delay(100);
-		while(!setPingInterval(500,1))
+		P30_Delay(100);
+		while(!setPingInterval(ping_interval_ms,1))
 		{
 //				return false;
-			HAL_Delay(100);
+			P30_Delay(100);
 		}
-		HAL_Delay(100);
+		P30_Delay(100);
 //		if(!setPingEnable())
 //		{
 //				return false;
@@ -59,9 +73,9 @@ bool P30::initialize(uint16_t ping_interval_ms)
 		while(!setContinuousStart())
 		{
 //				return false;
-			HAL_Delay(100);
+			P30_Delay(100);
 		}
-		return true;
+		return 0;
  }
 
 bool P30::update()
@@ -141,8 +155,8 @@ ping_message* P30::request(enum PingEnumNamespace::PingMessageId id,
         msg.set_id((uint16_t)id);
         msg.updateChecksum();
         write(msg.msgData, msg.msgDataLength());
-        HAL_UART_Transmit(&huart1, (uint8_t*)"BB", 3, timeout_ms);
-        HAL_UART_Transmit(&huart1, msg.msgData, msg.msgDataLength(), timeout_ms);
+//        HAL_UART_Transmit(&huart1, (uint8_t*)"BB", 3, timeout_ms);
+//        HAL_UART_Transmit(&huart1, msg.msgData, msg.msgDataLength(), timeout_ms);
         ping_message* pmsg = waitMessage(id, timeout_ms);
         if(pmsg)
         {
@@ -197,7 +211,7 @@ bool P30::setPingEnable()
 		msg.set_ping_enabled(1);
 		msg.updateChecksum();
 		write(msg.msgData, msg.msgDataLength());
-		HAL_UART_Transmit(&huart1, msg.msgData, msg.msgDataLength(), 100);
+//		HAL_UART_Transmit(&huart1, msg.msgData, msg.msgDataLength(), 100);
 		if(waitMessage((enum PingEnumNamespace::PingMessageId) 1, 100))
 		{
 			return true;
@@ -212,7 +226,7 @@ bool P30::setContinuousStart()
 		msg.set_id(1211);
 		msg.updateChecksum();
 		write(msg.msgData, msg.msgDataLength());
-		HAL_UART_Transmit(&huart1, msg.msgData, msg.msgDataLength(), 1000);
+//		HAL_UART_Transmit(&huart1, msg.msgData, msg.msgDataLength(), 1000);
 		if(waitMessage((enum PingEnumNamespace::PingMessageId) 1, 1000))
 		{
 			return true;
@@ -256,10 +270,11 @@ ping_message* P30::waitMessage(enum PingEnumNamespace::PingMessageId id, uint16_
 
 				if(!pmsg)
 				{
+					P30_Delay(20);
 					continue;
 				}
-				HAL_UART_Transmit(&huart1, (uint8_t*)"AA", 3, 100);
-				HAL_UART_Transmit(&huart1, pmsg->msgData, pmsg->msgDataLength(), 100);
+//				HAL_UART_Transmit(&huart1, (uint8_t*)"AA", 3, 100);
+//				HAL_UART_Transmit(&huart1, pmsg->msgData, pmsg->msgDataLength(), 100);
 				return pmsg;
 		}
 		return nullptr;

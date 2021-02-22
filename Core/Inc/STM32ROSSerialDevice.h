@@ -21,14 +21,13 @@ public:
 
 	static void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 	{
-		if(huart->Instance == USART2)
-		{
+
 
 			*(rx_buffer + write_index) = byte;
 			write_index = (write_index + 1)%ROS_RX_BUFFER_SIZE;
 			count ++;
 //			HAL_UART_Transmit(&huart3, &byte, 1, 10);
-		}
+
 	}
 	/**
 	 * @brief Initlalization
@@ -60,9 +59,9 @@ public:
 		if(count > 0)
 		{
 			read_index = (read_index + 1)%ROS_RX_BUFFER_SIZE;
-			HAL_NVIC_DisableIRQ(DMA1_Channel6_IRQn);
+			__disable_irq();
 			count --;
-			HAL_NVIC_EnableIRQ(DMA1_Channel6_IRQn);
+			__enable_irq();
 			HAL_UART_Transmit(&huart1, rx_buffer + read_index, 1, 100);
 			return *(rx_buffer + read_index);
 		}

@@ -11,7 +11,6 @@
 #include "ping-cpp/src/message/ping-message-all.h"
 #include "ping-cpp/src/message/ping-parser.h"
 #include "stdio.h"
-
 #include "P30Device.h"
 
 
@@ -19,15 +18,15 @@ class P30 {
 public:
 		P30( P30Device* device);
 		virtual ~P30();
-		bool initialize(uint16_t ping_interval_ms);
+		uint8_t initialize(uint16_t ping_interval_ms);
 		bool update();
 		bool setPingInterval(uint16_t ping_interval, bool verify);
 		bool setModeAuto(uint8_t mode_auto, bool verify);
 		bool setPingEnable();
 		bool setContinuousStart();
 		ping_message* waitMessage(enum PingEnumNamespace::PingMessageId id, uint16_t timeout_ms);
-
-
+		ping_message* read();
+		bool handleMessage(ping_message *pMsg);
         // Device type. 0: Unknown; 1: Echosounder
 		uint8_t _device_type = 0;
 
@@ -96,9 +95,9 @@ private:
         P30Device* p30Device;
         size_t write(uint8_t* data, uint16_t length);
 		uint16_t readByte();
-		ping_message* read();
 
-		bool handleMessage(ping_message *pMsg);
+
+
 		ping_message* request(enum PingEnumNamespace::PingMessageId id,
 		                              uint16_t timeout_ms);
 

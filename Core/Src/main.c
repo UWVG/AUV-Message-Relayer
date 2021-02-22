@@ -28,8 +28,8 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
-//#include "P30.h"
-//#include "STM32P30Device.h"
+#include "P30.h"
+#include "STM32P30Device.h"
 #include "ROSApi.h"
 #include "std_msgs/UInt32.h"
 /* USER CODE END Includes */
@@ -53,17 +53,21 @@
 /* USER CODE BEGIN PV */
 ros::NodeHandle nh;
 std_msgs::UInt32 var;
+std_msgs::UInt32 var1;
 ros::Publisher b30Publisher("B30",&var);
-
+ros::Publisher p30Publisher("P30",&var1);
 TaskHandle_t xHandle = NULL;
 TaskHandle_t xHandle1 = NULL;
+TaskHandle_t xHandle2 = NULL;
 double 	b30_temperture;
 int32_t b30_pressure;
-
+STM32P30Device stm32P30Device;
+P30 p30( &stm32P30Device );
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
+
 /* USER CODE BEGIN PFP */
 
 extern "C"{
@@ -72,6 +76,7 @@ void MX_FREERTOS_Init(void);
 }
 void StartROSSerialTask(void const * argument);
 void StartB30Task(void const * argument);
+void StartP30Task(void const * argument);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -113,10 +118,10 @@ int main(void)
   MX_USART3_UART_Init();
   MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
-//  STM32P30Device stm32P30Device;
-//  P30 p30( &stm32P30Device );
   nh.initNode();
   nh.advertise(b30Publisher);
+  nh.advertise(p30Publisher);
+
 //  HAL_UART_Transmit(&huart1, (uint8_t*)"678910", 6, 5);
   xTaskCreate(	(TaskFunction_t)StartROSSerialTask,
 				"ROSSerial",	/*lint !e971 Unqualified char types are allowed for strings and single characters only. */
@@ -130,6 +135,12 @@ int main(void)
   				NULL,
   				3,
   				&xHandle1);
+  xTaskCreate(	(TaskFunction_t)StartP30Task,
+				"P30",	/*lint !e971 Unqualified char types are allowed for strings and single characters only. */
+				200,
+				NULL,
+				3,
+				&xHandle2);
 //  if(!xHandle)
 //  {
 //	  HAL_UART_Transmit(&huart1, (uint8_t*)"000000", 6, 5);
@@ -235,11 +246,36 @@ void StartB30Task(void const * argument)
 		while(!B30_GetData(&b30_pressure, &b30_temperture))
 		{
 			var.data = b30_pressure;
-			HAL_UART_Transmit(&huart1, (uint8_t*)"77777", 5, 5);
+//			HAL_UART_Transmit(&huart1, (uint8_t*)"77777", 5, 5);
 			vTaskSuspendAll();
 			b30Publisher.publish(&var);
 			xTaskResumeAll();
 			vTaskDelay(20);
+		}
+	}
+}
+void StartP30Task(void const * argument)
+{
+	ping_message *msg;
+	for(;;)
+	{
+		while(p30.initialize(50))
+		{
+
+		}
+		while(1)
+		{
+			msg=p30.read();
+			if(msg)
+			{
+				p30.handleMessage(msg);
+				var1.data = p30._distance;
+				vTaskSuspendAll();
+				p30Publisher.publish(&var1);
+				xTaskResumeAll();
+			}
+			else
+				vTaskDelay(20);
 		}
 	}
 }
