@@ -19,13 +19,19 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "cmsis_os.h"
+#include "dma.h"
+#include "i2c.h"
 #include "usart.h"
 #include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "P30.h"
-#include "STM32P30Device.h"
+
+//#include "P30.h"
+//#include "STM32P30Device.h"
+#include "ROSApi.h"
+#include "std_msgs/UInt32.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -45,6 +51,14 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
+ros::NodeHandle nh;
+std_msgs::UInt32 var;
+ros::Publisher b30Publisher("B30",&var);
+
+TaskHandle_t xHandle = NULL;
+TaskHandle_t xHandle1 = NULL;
+double 	b30_temperture;
+int32_t b30_pressure;
 
 /* USER CODE END PV */
 
@@ -52,6 +66,12 @@
 void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
 
+extern "C"{
+#include "B30.h"
+void MX_FREERTOS_Init(void);
+}
+void StartROSSerialTask(void const * argument);
+void StartB30Task(void const * argument);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -87,15 +107,42 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_DMA_Init();
   MX_USART1_UART_Init();
   MX_USART2_UART_Init();
+  MX_USART3_UART_Init();
+  MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
-  STM32P30Device stm32P30Device;
-  P30 p30( &stm32P30Device );
-
-
+//  STM32P30Device stm32P30Device;
+//  P30 p30( &stm32P30Device );
+  nh.initNode();
+  nh.advertise(b30Publisher);
+//  HAL_UART_Transmit(&huart1, (uint8_t*)"678910", 6, 5);
+  xTaskCreate(	(TaskFunction_t)StartROSSerialTask,
+				"ROSSerial",	/*lint !e971 Unqualified char types are allowed for strings and single characters only. */
+				100,
+				NULL,
+				5,
+				&xHandle);
+  xTaskCreate(	(TaskFunction_t)StartB30Task,
+  				"B30",	/*lint !e971 Unqualified char types are allowed for strings and single characters only. */
+  				200,
+  				NULL,
+  				3,
+  				&xHandle1);
+//  if(!xHandle)
+//  {
+//	  HAL_UART_Transmit(&huart1, (uint8_t*)"000000", 6, 5);
+//  }
+//  HAL_UART_Transmit(&huart1, (uint8_t*)"111111", 6, 5);
   /* USER CODE END 2 */
 
+  /* Call init function for freertos objects (in freertos.c) */
+  MX_FREERTOS_Init();
+  /* Start scheduler */
+  osKernelStart();
+
+  /* We should never get here as control is now taken by the scheduler */
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
@@ -103,21 +150,24 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	  printf("dhjkfahiuksdjfhkjadhfkjadh\n");
-	  while(!p30.initialize(15))
-	  {
-		  HAL_Delay(2000);
-	  }
-	  //p30.request(PingEnumNamespace::PingMessageId::PING1D_PING_INTERVAL, 100);
-	  //bool flag = p30.setPingInterval(50,1);
-//	  bool flag = p30.setPingEnable();
-//	  if(flag)
-//		  HAL_UART_Transmit(&huart1, (uint8_t*)"CC", 3, 100);
-	  while(1)
-	  {
 
-		  	  p30.waitMessage(PingEnumNamespace::PingMessageId::PING1D_MODE_AUTO, 100);
-	  }
+
+	 nh.spinOnce();
+
+//	  while(!p30.initialize(15))
+//	  {
+//		  HAL_Delay(2000);
+//	  }
+//	  //p30.request(PingEnumNamespace::PingMessageId::PING1D_PING_INTERVAL, 100);
+//	  //bool flag = p30.setPingInterval(50,1);
+////	  bool flag = p30.setPingEnable();
+////	  if(flag)
+////		  HAL_UART_Transmit(&huart1, (uint8_t*)"CC", 3, 100);
+//	  while(1)
+//	  {
+//
+//		  	  p30.waitMessage(PingEnumNamespace::PingMessageId::PING1D_MODE_AUTO, 100);
+//	  }
 	  //p30.update();
 	  //int t=HAL_GetTick();
 	  HAL_Delay(1000);
@@ -164,7 +214,35 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
+void StartROSSerialTask(void const * argument)
+{
+	for(;;)
+	{
+		nh.spinOnce();
+//		HAL_UART_Transmit(&huart1, (uint8_t*)"11111", 5, 5);
+		vTaskDelay(5000);
+	}
+}
 
+void StartB30Task(void const * argument)
+{
+	for(;;)
+	{
+		while(B30_init())
+		{
+			vTaskDelay(1000);
+		}
+		while(!B30_GetData(&b30_pressure, &b30_temperture))
+		{
+			var.data = b30_pressure;
+			HAL_UART_Transmit(&huart1, (uint8_t*)"77777", 5, 5);
+			vTaskSuspendAll();
+			b30Publisher.publish(&var);
+			xTaskResumeAll();
+			vTaskDelay(20);
+		}
+	}
+}
 /* USER CODE END 4 */
 
  /**

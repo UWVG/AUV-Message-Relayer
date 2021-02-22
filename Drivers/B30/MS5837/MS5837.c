@@ -13,20 +13,18 @@
 
 
 static uint32_t Cal_C[7];
-static float Aux;
 static int32_t dT,TEMP;
 static int64_t OFF_,SENS;
 static uint32_t D1_Pres,D2_Temp;
-static int32_t Pressure_old;
 static int32_t OFFi=0,SENSi=0,Ti=0;
 static int64_t OFF2 = 0;
 static int64_t SENS2 = 0;
-static uint32_t TEMP2;
-static double T2;
 static uint8_t MS5837_30BA_GetConversion(uint8_t command, uint32_t* conversion);
 
 double Temperature;
 int32_t Pressure;
+
+extern void vTaskDelay(const uint32_t time);
 
 
 /*******************************************************************************
@@ -56,7 +54,7 @@ uint8_t MS5837_30BA_PROM(void)
 		uint8_t inth,intl;
 		uint8_t data[3];
 		MS5837_30BA_ReSet();
-		HAL_Delay(20);
+		vTaskDelay(20);
 		for(int i = 0; i < 7; i++)
 		{
 			data[0] = MS5837_30BA_PROM_RD + (i*2);
@@ -84,7 +82,7 @@ uint8_t MS5837_30BA_GetConversion(uint8_t command,uint32_t* conversion)
 			data[0] = command;
 			if(HAL_I2C_Master_Transmit(&hi2c1, MS5837_30BA_WriteCommand, data, 1, 100))
 				return 1;
-			HAL_Delay(10);
+			vTaskDelay(10);
 			data[0] = 0;
 			if(HAL_I2C_Master_Transmit(&hi2c1, MS5837_30BA_WriteCommand, data, 1, 100))
 				return 2;
@@ -107,10 +105,10 @@ uint8_t MS5837_30BA_GetData(void)
 {
 		if(MS5837_30BA_GetConversion(MS5837_30BA_D2_OSR_8192, &D2_Temp))
 			return 1;
-		HAL_Delay(20);
+		vTaskDelay(20);
 		if(MS5837_30BA_GetConversion(MS5837_30BA_D1_OSR_8192, &D1_Pres))
 			return 2;
-		HAL_Delay(20);
+		vTaskDelay(20);
 		dT=D2_Temp - (((uint32_t)Cal_C[5])*256l);
 		SENS=(int64_t)Cal_C[1]*32768l+((int64_t)Cal_C[3]*dT)/256l;
 		OFF_=(int64_t)Cal_C[2]*65536l+((int64_t)Cal_C[4]*dT)/128l;
