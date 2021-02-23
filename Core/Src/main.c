@@ -70,7 +70,6 @@ P30 p30( &stm32P30Device );
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
-
 /* USER CODE BEGIN PFP */
 
 extern "C"{
@@ -135,7 +134,7 @@ int main(void)
 				&xHandle);
   xTaskCreate(	(TaskFunction_t)StartB30Task,
   				"B30",	/*lint !e971 Unqualified char types are allowed for strings and single characters only. */
-  				200,
+  				300,
   				NULL,
   				3,
   				&xHandle1);
@@ -247,15 +246,29 @@ void StartROSSerialTask(void const * argument)
 
 void StartB30Task(void const * argument)
 {
+	uint8_t ret;
 	for(;;)
 	{
 //		vTaskSuspendAll();
 //		taskYIELD();
 //		xTaskResumeAll();
-		while(B30_init())
+
+		while((ret = B30_init()))
 		{
+			HAL_UART_Transmit(&huart1, (uint8_t *)&ret, 1, 100);
 			vTaskDelay(1000);
 		}
+//		while(1)
+//		{
+//			var.data = 0;
+////			HAL_UART_Transmit(&huart1, (uint8_t*)"77777", 5, 5);
+//			vTaskSuspendAll();
+//			b30Publisher.publish(&var);
+//			if(!xTaskResumeAll())
+//				taskYIELD();
+//			vTaskDelay(20);
+//		}
+		HAL_UART_Transmit(&huart1, (uint8_t *)"----", 4, 100);
 		while(!B30_GetData(&b30_pressure, &b30_temperture))
 		{
 			var.data = b30_pressure;
@@ -264,7 +277,7 @@ void StartB30Task(void const * argument)
 			b30Publisher.publish(&var);
 			if(!xTaskResumeAll())
 				taskYIELD();
-			vTaskDelay(200);
+			vTaskDelay(20);
 		}
 	}
 }
@@ -277,6 +290,7 @@ void StartP30Task(void const * argument)
 		{
 
 		}
+//		stm32P30Device.init();
 		while(1)
 		{
 //			var2.data = HAL_GetTick();
@@ -294,7 +308,6 @@ void StartP30Task(void const * argument)
 				var1.data = p30._distance;
 				vTaskSuspendAll();
 				p30Publisher.publish(&var1);
-
 				if(!xTaskResumeAll())
 					taskYIELD();
 				vTaskDelay(10);

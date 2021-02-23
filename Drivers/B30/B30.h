@@ -24,7 +24,10 @@ uint8_t B30_init()
 
 uint8_t B30_GetData(int32_t* PRESSURE,double* TEMPETURE)
 {
-		if(MS5837_30BA_GetData())
+	uint8_t ret;
+	ret = MS5837_30BA_GetData();
+//	HAL_UART_Transmit(&huart1, (uint8_t *)&ret, 1, 100);
+		if(ret)
 			return 1;
 		*TEMPETURE = Temperature;
 		*PRESSURE = Pressure;

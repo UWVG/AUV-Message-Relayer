@@ -19,9 +19,17 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "i2c.h"
+#include "usart.h"
 
 /* USER CODE BEGIN 0 */
-
+void MasterTxCpltCallback(struct __I2C_HandleTypeDef *hi2c)
+{
+//	HAL_UART_Transmit(&huart1, (uint8_t *)"7777", 4, 100);
+}
+void MasterRxCpltCallback(struct __I2C_HandleTypeDef *hi2c)
+{
+//	HAL_UART_Transmit(&huart1, (uint8_t *)"8888", 4, 100);
+}
 /* USER CODE END 0 */
 
 I2C_HandleTypeDef hi2c1;
@@ -39,6 +47,8 @@ void MX_I2C1_Init(void)
   hi2c1.Init.OwnAddress2 = 0;
   hi2c1.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
   hi2c1.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
+  hi2c1.MasterTxCpltCallback = MasterTxCpltCallback;
+  hi2c1.MasterRxCpltCallback = MasterRxCpltCallback;
   if (HAL_I2C_Init(&hi2c1) != HAL_OK)
   {
     Error_Handler();
@@ -68,6 +78,10 @@ void HAL_I2C_MspInit(I2C_HandleTypeDef* i2cHandle)
 
     /* I2C1 clock enable */
     __HAL_RCC_I2C1_CLK_ENABLE();
+
+    /* I2C1 interrupt Init */
+    HAL_NVIC_SetPriority(I2C1_EV_IRQn, 5, 0);
+    HAL_NVIC_EnableIRQ(I2C1_EV_IRQn);
   /* USER CODE BEGIN I2C1_MspInit 1 */
 
   /* USER CODE END I2C1_MspInit 1 */
@@ -93,6 +107,8 @@ void HAL_I2C_MspDeInit(I2C_HandleTypeDef* i2cHandle)
 
     HAL_GPIO_DeInit(GPIOB, GPIO_PIN_7);
 
+    /* I2C1 interrupt Deinit */
+    HAL_NVIC_DisableIRQ(I2C1_EV_IRQn);
   /* USER CODE BEGIN I2C1_MspDeInit 1 */
 
   /* USER CODE END I2C1_MspDeInit 1 */

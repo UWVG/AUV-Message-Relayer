@@ -23,7 +23,7 @@ static uint8_t MS5837_30BA_GetConversion(uint8_t command, uint32_t* conversion);
 
 double Temperature;
 int32_t Pressure;
-
+#include "usart.h"
 extern void vTaskDelay(const uint32_t time);
 
 
@@ -37,7 +37,12 @@ extern void vTaskDelay(const uint32_t time);
 uint8_t MS5837_30BA_ReSet(void)
 {
 		uint8_t  data = MS5837_30BA_ResetCommand;
-		return HAL_I2C_Master_Transmit(&hi2c1, MS5837_30BA_WriteCommand, &data, 1, 100);
+		HAL_I2C_Master_Transmit_IT(&hi2c1, MS5837_30BA_WriteCommand, &data, 1);
+		while(hi2c1.State != HAL_I2C_STATE_READY)
+		{
+			vTaskDelay(5);
+		}
+		return 0;
 }
 /*******************************************************************************
   * @ function        name MS5837_PROM
@@ -58,11 +63,19 @@ uint8_t MS5837_30BA_PROM(void)
 		for(int i = 0; i < 7; i++)
 		{
 			data[0] = MS5837_30BA_PROM_RD + (i*2);
-			if(HAL_I2C_Master_Transmit(&hi2c1, MS5837_30BA_WriteCommand, data, 1, 100))
+			if(HAL_I2C_Master_Transmit_IT(&hi2c1, MS5837_30BA_WriteCommand, data, 1))
 				return 2*i+1;
+			while(hi2c1.State != HAL_I2C_STATE_READY)
+			{
+				vTaskDelay(5);
+			}
 
-			if(HAL_I2C_Master_Receive(&hi2c1, MS5837_30BA_ReadCommand, data, 2, 100))
+			if(HAL_I2C_Master_Receive_IT(&hi2c1, MS5837_30BA_ReadCommand, data, 2))
 				return 2*i+2;
+			while(hi2c1.State != HAL_I2C_STATE_READY)
+			{
+				vTaskDelay(5);
+			}
 			inth = data[0];
 			intl = data[1];
 			Cal_C[i] = (((uint16_t)inth << 8) | intl);
@@ -80,13 +93,30 @@ uint8_t MS5837_30BA_GetConversion(uint8_t command,uint32_t* conversion)
 			uint8_t  data[3];
 			uint8_t  temp[3];
 			data[0] = command;
-			if(HAL_I2C_Master_Transmit(&hi2c1, MS5837_30BA_WriteCommand, data, 1, 100))
+			if(HAL_I2C_Master_Transmit_IT(&hi2c1, MS5837_30BA_WriteCommand, data, 1))
 				return 1;
-			vTaskDelay(10);
+//			HAL_UART_Transmit(&huart1, (uint8_t *)"1111", 4, 100);
+			//上一行存在会导致错误
+			while(hi2c1.State != HAL_I2C_STATE_READY)
+			{
+//				HAL_UART_Transmit(&huart1, (uint8_t *)"0000", 4, 100);
+				vTaskDelay(10);
+			}
 			data[0] = 0;
-			if(HAL_I2C_Master_Transmit(&hi2c1, MS5837_30BA_WriteCommand, data, 1, 100))
+			if(HAL_I2C_Master_Transmit_IT(&hi2c1, MS5837_30BA_WriteCommand, data, 1))
 				return 2;
-			HAL_I2C_Master_Receive(&hi2c1, MS5837_30BA_ReadCommand, data, 3, 100);
+//			HAL_UART_Transmit(&huart1, (uint8_t *)"2222", 4, 100);
+//			HAL_UART_Transmit(&huart1, (uint8_t *)&hi2c1.State, 1, 100);
+			while(hi2c1.State != HAL_I2C_STATE_READY)
+			{
+				vTaskDelay(5);
+			}
+			HAL_I2C_Master_Receive_IT(&hi2c1, MS5837_30BA_ReadCommand, data, 3);
+//			HAL_UART_Transmit(&huart1, (uint8_t *)"3333", 4, 100);
+			while(hi2c1.State != HAL_I2C_STATE_READY)
+			{
+				vTaskDelay(5);
+			}
 			temp[0] = data[0];
 			temp[1] = data[1];
 			temp[2] = data[2];
@@ -105,10 +135,10 @@ uint8_t MS5837_30BA_GetData(void)
 {
 		if(MS5837_30BA_GetConversion(MS5837_30BA_D2_OSR_8192, &D2_Temp))
 			return 1;
-		vTaskDelay(20);
+//		vTaskDelay(20);
 		if(MS5837_30BA_GetConversion(MS5837_30BA_D1_OSR_8192, &D1_Pres))
 			return 2;
-		vTaskDelay(20);
+//		vTaskDelay(20);
 		dT=D2_Temp - (((uint32_t)Cal_C[5])*256l);
 		SENS=(int64_t)Cal_C[1]*32768l+((int64_t)Cal_C[3]*dT)/256l;
 		OFF_=(int64_t)Cal_C[2]*65536l+((int64_t)Cal_C[4]*dT)/128l;

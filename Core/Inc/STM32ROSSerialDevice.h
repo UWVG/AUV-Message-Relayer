@@ -21,8 +21,6 @@ public:
 
 	static void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 	{
-
-
 			*(rx_buffer + write_index) = byte;
 			write_index = (write_index + 1)%ROS_RX_BUFFER_SIZE;
 			count ++;
