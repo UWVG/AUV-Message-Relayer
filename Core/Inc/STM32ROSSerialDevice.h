@@ -11,7 +11,7 @@
 #include "ROSSerialDevice.h"
 #include "usart.h"
 
-#define ROS_RX_BUFFER_SIZE 100
+#define ROS_RX_BUFFER_SIZE 1024
 
 class STM32ROSSerialDevice : public ROSSerialDevice {
 
@@ -62,7 +62,7 @@ public:
 			__disable_irq();
 			count --;
 			__enable_irq();
-			HAL_UART_Transmit(&huart1, rx_buffer + read_index, 1, 100);
+//			HAL_UART_Transmit(&huart1, rx_buffer + read_index, 1, 100);
 			return *(rx_buffer + read_index);
 		}
 		return -1;
@@ -84,7 +84,7 @@ public:
 	static uint8_t rx_buffer[ROS_RX_BUFFER_SIZE];
 	static uint8_t read_index;
 	static uint8_t write_index ;
-	static uint8_t count ;
+	static int16_t count ;
 	static uint8_t byte;
 
 };
@@ -92,7 +92,7 @@ public:
 uint8_t STM32ROSSerialDevice::rx_buffer[ROS_RX_BUFFER_SIZE] = {0};
 uint8_t STM32ROSSerialDevice::read_index = ROS_RX_BUFFER_SIZE - 1;
 uint8_t STM32ROSSerialDevice::write_index = 0;
-uint8_t STM32ROSSerialDevice::count = 0;
+int16_t STM32ROSSerialDevice::count = 0;
 uint8_t STM32ROSSerialDevice::byte = 0;
 
 #endif /* INC_STM32ROSSERIALDEVICE_H_ */

@@ -54,11 +54,14 @@
 ros::NodeHandle nh;
 std_msgs::UInt32 var;
 std_msgs::UInt32 var1;
+std_msgs::UInt32 var2;
 ros::Publisher b30Publisher("B30",&var);
 ros::Publisher p30Publisher("P30",&var1);
+ros::Publisher t30Publisher("T30",&var2);
 TaskHandle_t xHandle = NULL;
 TaskHandle_t xHandle1 = NULL;
 TaskHandle_t xHandle2 = NULL;
+TaskHandle_t xHandle3 = NULL;
 double 	b30_temperture;
 int32_t b30_pressure;
 STM32P30Device stm32P30Device;
@@ -77,6 +80,7 @@ void MX_FREERTOS_Init(void);
 void StartROSSerialTask(void const * argument);
 void StartB30Task(void const * argument);
 void StartP30Task(void const * argument);
+void StartT30Task(void const * argument);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -121,7 +125,7 @@ int main(void)
   nh.initNode();
   nh.advertise(b30Publisher);
   nh.advertise(p30Publisher);
-
+  nh.advertise(t30Publisher);
 //  HAL_UART_Transmit(&huart1, (uint8_t*)"678910", 6, 5);
   xTaskCreate(	(TaskFunction_t)StartROSSerialTask,
 				"ROSSerial",	/*lint !e971 Unqualified char types are allowed for strings and single characters only. */
@@ -141,6 +145,12 @@ int main(void)
 				NULL,
 				3,
 				&xHandle2);
+  xTaskCreate(	(TaskFunction_t)StartT30Task,
+ 				"T30",	/*lint !e971 Unqualified char types are allowed for strings and single characters only. */
+ 				200,
+ 				NULL,
+ 				4,
+ 				&xHandle3);
 //  if(!xHandle)
 //  {
 //	  HAL_UART_Transmit(&huart1, (uint8_t*)"000000", 6, 5);
@@ -239,6 +249,9 @@ void StartB30Task(void const * argument)
 {
 	for(;;)
 	{
+//		vTaskSuspendAll();
+//		taskYIELD();
+//		xTaskResumeAll();
 		while(B30_init())
 		{
 			vTaskDelay(1000);
@@ -249,8 +262,9 @@ void StartB30Task(void const * argument)
 //			HAL_UART_Transmit(&huart1, (uint8_t*)"77777", 5, 5);
 			vTaskSuspendAll();
 			b30Publisher.publish(&var);
-			xTaskResumeAll();
-			vTaskDelay(20);
+			if(!xTaskResumeAll())
+				taskYIELD();
+			vTaskDelay(200);
 		}
 	}
 }
@@ -265,6 +279,14 @@ void StartP30Task(void const * argument)
 		}
 		while(1)
 		{
+//			var2.data = HAL_GetTick();
+//						vTaskSuspendAll();
+//						t30Publisher.publish(&var2);
+//		//				printf("current time:%d",var2.data);
+//						if(!xTaskResumeAll())
+//							taskYIELD();
+//
+//						vTaskDelay(20);
 			msg=p30.read();
 			if(msg)
 			{
@@ -272,12 +294,33 @@ void StartP30Task(void const * argument)
 				var1.data = p30._distance;
 				vTaskSuspendAll();
 				p30Publisher.publish(&var1);
-				xTaskResumeAll();
+
+				if(!xTaskResumeAll())
+					taskYIELD();
+				vTaskDelay(10);
+				HAL_UART_Transmit(&huart1, (uint8_t *)"000000000000000", 15, 100);
 			}
 			else
-				vTaskDelay(20);
+				HAL_UART_Transmit(&huart1, (uint8_t *)"111111111111111", 15, 100);
+				vTaskDelay(10);
 		}
 	}
+}
+void StartT30Task(void const * argument)
+{
+	for(;;)
+	{
+//				var2.data = HAL_GetTick();
+//				vTaskSuspendAll();
+//				t30Publisher.publish(&var2);
+////				printf("current time:%d",var2.data);
+//				if(!xTaskResumeAll())
+//					taskYIELD();
+//
+//				vTaskDelay(20);
+//		HAL_UART_Transmit(&huart1, (uint8_t *)"Hello!", 6, 100);
+		vTaskDelay(100);
+		}
 }
 /* USER CODE END 4 */
 
@@ -313,6 +356,7 @@ void Error_Handler(void)
   __disable_irq();
   while (1)
   {
+	  HAL_UART_Transmit(&huart1, (uint8_t *)"Error_Handler\n", 14, 100);
   }
   /* USER CODE END Error_Handler_Debug */
 }

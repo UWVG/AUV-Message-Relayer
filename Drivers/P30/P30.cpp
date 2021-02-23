@@ -249,10 +249,13 @@ uint16_t P30::readByte()
 ping_message* P30::read()
 {
 		uint16_t byte;
+		uint8_t res;
 		byte = readByte();
 		while(byte < 256)
 		{
-				if(pingParser.parseByte(byte) == PingParser::NEW_MESSAGE)
+				res = pingParser.parseByte(byte);
+				HAL_UART_Transmit(&huart1, &res, 1, 100);
+				if(res == PingParser::NEW_MESSAGE)
 				{
 					return &pingParser.rxMessage;
 				}
