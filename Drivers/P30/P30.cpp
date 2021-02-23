@@ -254,7 +254,8 @@ ping_message* P30::read()
 		while(byte < 256)
 		{
 				res = pingParser.parseByte(byte);
-				HAL_UART_Transmit(&huart1, &res, 1, 100);
+				HAL_UART_Transmit(&huart1, (uint8_t *)&res, 1, 100);
+				HAL_UART_Transmit(&huart1, (uint8_t *)&pingParser.errors, 4, 100);
 				if(res == PingParser::NEW_MESSAGE)
 				{
 					return &pingParser.rxMessage;

@@ -298,10 +298,10 @@ void StartP30Task(void const * argument)
 				if(!xTaskResumeAll())
 					taskYIELD();
 				vTaskDelay(10);
-				HAL_UART_Transmit(&huart1, (uint8_t *)"000000000000000", 15, 100);
+//				HAL_UART_Transmit(&huart1, (uint8_t *)"000000000000000", 15, 100);
 			}
 			else
-				HAL_UART_Transmit(&huart1, (uint8_t *)"111111111111111", 15, 100);
+//				HAL_UART_Transmit(&huart1, (uint8_t *)"111111111111111", 15, 100);
 				vTaskDelay(10);
 		}
 	}

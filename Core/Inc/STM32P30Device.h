@@ -50,16 +50,16 @@ public:
 		if(count > 0)
 		{
 			read_index = (read_index + 1)%P30_RX_BUFFER_SIZE;
-//			__disable_irq();
+			__disable_irq();
 			count --;
-//			__enable_irq();
-			HAL_UART_Transmit(&huart1, rx_buffer + read_index, 1, 100);
+			__enable_irq();
+//			HAL_UART_Transmit(&huart1, rx_buffer + read_index, 1, 100);
 			return *(rx_buffer + read_index);
 		}
 		else
 		{
-			HAL_UART_Transmit(&huart1, (uint8_t *)&count, 2, 100);
-			HAL_UART_Transmit(&huart1, (uint8_t *)&count, 2, 100);
+//			HAL_UART_Transmit(&huart1, (uint8_t *)&count, 2, 100);
+//			HAL_UART_Transmit(&huart1, (uint8_t *)&count, 2, 100);
 		}
 //		HAL_UART_Transmit(&huart1, (uint8_t*)"N", 1, 100);
 		return 256;
