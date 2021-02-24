@@ -96,12 +96,10 @@ uint8_t MS5837_30BA_GetConversion(uint8_t command,uint32_t* conversion)
 			if(HAL_I2C_Master_Transmit_IT(&hi2c1, MS5837_30BA_WriteCommand, data, 1))
 				return 1;
 //			HAL_UART_Transmit(&huart1, (uint8_t *)"1111", 4, 100);
-			//上一行存在会导致错误
-			while(hi2c1.State != HAL_I2C_STATE_READY)
-			{
-//				HAL_UART_Transmit(&huart1, (uint8_t *)"0000", 4, 100);
-				vTaskDelay(10);
-			}
+			do{
+				vTaskDelay(20);
+			}while(hi2c1.State != HAL_I2C_STATE_READY);
+
 			data[0] = 0;
 			if(HAL_I2C_Master_Transmit_IT(&hi2c1, MS5837_30BA_WriteCommand, data, 1))
 				return 2;
