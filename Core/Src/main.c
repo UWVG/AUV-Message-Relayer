@@ -307,19 +307,31 @@ void StartP30Task(void const * argument)
 }
 void StartT30Task(void const * argument)
 {
+	int flag = 0;
+	int time = 0;
+	int dtime = 0;
 	for(;;)
 	{
-//				var2.data = HAL_GetTick();
-//				vTaskSuspendAll();
-//				t30Publisher.publish(&var2);
-////				printf("current time:%d",var2.data);
-//				if(!xTaskResumeAll())
-//					taskYIELD();
-//
-//				vTaskDelay(20);
-//		HAL_UART_Transmit(&huart1, (uint8_t *)"Hello!", 6, 100);
-		vTaskDelay(100);
+		dtime += HAL_GetTick() - time;
+//		printf("dtime %d\n", dtime);
+		time   = HAL_GetTick();
+		if (dtime >= 1000)
+		{
+			var2.data = flag;
+			vTaskSuspendAll();
+			t30Publisher.publish(&var2);
+			if(!xTaskResumeAll())
+				taskYIELD();
+			printf("--------------------percent: %d\n", flag);
+			flag = 0;
+			dtime = 0;
 		}
+		else
+		{
+			flag ++;
+		}
+		vTaskDelay(10);
+	}
 }
 /* USER CODE END 4 */
 
