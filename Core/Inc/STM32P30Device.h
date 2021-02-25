@@ -10,7 +10,7 @@
 #include "P30Device.h"
 #include "usart.h"
 
-#define P30_RX_BUFFER_SIZE 1024
+#define P30_RX_BUFFER_SIZE 256
 
 class STM32P30Device : public P30Device {
 public:

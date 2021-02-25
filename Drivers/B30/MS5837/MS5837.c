@@ -93,28 +93,39 @@ uint8_t MS5837_30BA_GetConversion(uint8_t command,uint32_t* conversion)
 			uint8_t  data[3];
 			uint8_t  temp[3];
 			data[0] = command;
+
 			if(HAL_I2C_Master_Transmit_IT(&hi2c1, MS5837_30BA_WriteCommand, data, 1))
+			{
 				return 1;
-//			HAL_UART_Transmit(&huart1, (uint8_t *)"1111", 4, 100);
-			do{
-				vTaskDelay(20);
+			}
+			do
+			{
+				vTaskDelay(1);
+				printf("assert1: %d\n", hi2c1.State);
 			}while(hi2c1.State != HAL_I2C_STATE_READY);
+			vTaskDelay(10);
 
 			data[0] = 0;
 			if(HAL_I2C_Master_Transmit_IT(&hi2c1, MS5837_30BA_WriteCommand, data, 1))
+			{
 				return 2;
-//			HAL_UART_Transmit(&huart1, (uint8_t *)"2222", 4, 100);
-//			HAL_UART_Transmit(&huart1, (uint8_t *)&hi2c1.State, 1, 100);
-			while(hi2c1.State != HAL_I2C_STATE_READY)
-			{
-				vTaskDelay(5);
 			}
-			HAL_I2C_Master_Receive_IT(&hi2c1, MS5837_30BA_ReadCommand, data, 3);
-//			HAL_UART_Transmit(&huart1, (uint8_t *)"3333", 4, 100);
-			while(hi2c1.State != HAL_I2C_STATE_READY)
+			do
 			{
-				vTaskDelay(5);
+				vTaskDelay(1);
+				printf("assert2: %d\n", hi2c1.State);
+			}while(hi2c1.State != HAL_I2C_STATE_READY);
+
+			if (HAL_I2C_Master_Receive_IT(&hi2c1, MS5837_30BA_ReadCommand, data, 3))
+			{
+				return 3;
 			}
+			do
+			{
+				vTaskDelay(1);
+				printf("assert3: %d\n", hi2c1.State);
+			}while(hi2c1.State != HAL_I2C_STATE_READY);
+
 			temp[0] = data[0];
 			temp[1] = data[1];
 			temp[2] = data[2];
@@ -133,7 +144,7 @@ uint8_t MS5837_30BA_GetData(void)
 {
 		if(MS5837_30BA_GetConversion(MS5837_30BA_D2_OSR_8192, &D2_Temp))
 			return 1;
-//		vTaskDelay(20);
+		vTaskDelay(20);
 		if(MS5837_30BA_GetConversion(MS5837_30BA_D1_OSR_8192, &D1_Pres))
 			return 2;
 //		vTaskDelay(20);

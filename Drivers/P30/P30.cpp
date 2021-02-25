@@ -255,13 +255,14 @@ ping_message* P30::read()
 		{
 				res = pingParser.parseByte(byte);
 //				HAL_UART_Transmit(&huart1, (uint8_t *)&res, 1, 100);
-				HAL_UART_Transmit(&huart1, (uint8_t *)&pingParser.errors, 4, 100);
+//				HAL_UART_Transmit(&huart1, (uint8_t *)&pingParser.errors, 4, 100);
 				if(res == PingParser::NEW_MESSAGE)
 				{
 					return &pingParser.rxMessage;
 				}
 				byte = readByte();
 		}
+		printf("error: %d\n", pingParser.errors);
 		return nullptr;
 }
 

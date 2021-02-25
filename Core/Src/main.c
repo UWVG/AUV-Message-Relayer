@@ -249,34 +249,20 @@ void StartB30Task(void const * argument)
 	uint8_t ret;
 	for(;;)
 	{
-//		vTaskSuspendAll();
-//		taskYIELD();
-//		xTaskResumeAll();
-
 		while((ret = B30_init()))
 		{
-			HAL_UART_Transmit(&huart1, (uint8_t *)&ret, 1, 100);
+			printf("B30_init ret: %d\n", ret);
 			vTaskDelay(1000);
 		}
-//		while(1)
-//		{
-//			var.data = 0;
-////			HAL_UART_Transmit(&huart1, (uint8_t*)"77777", 5, 5);
-//			vTaskSuspendAll();
-//			b30Publisher.publish(&var);
-//			if(!xTaskResumeAll())
-//				taskYIELD();
-//			vTaskDelay(20);
-//		}
-		HAL_UART_Transmit(&huart1, (uint8_t *)"----", 4, 100);
 		while(!B30_GetData(&b30_pressure, &b30_temperture))
 		{
 			var.data = b30_pressure;
-//			HAL_UART_Transmit(&huart1, (uint8_t*)"77777", 5, 5);
+
 			vTaskSuspendAll();
 			b30Publisher.publish(&var);
 			if(!xTaskResumeAll())
 				taskYIELD();
+
 			vTaskDelay(20);
 		}
 	}
@@ -310,12 +296,12 @@ void StartP30Task(void const * argument)
 				p30Publisher.publish(&var1);
 				if(!xTaskResumeAll())
 					taskYIELD();
-				vTaskDelay(10);
+//				vTaskDelay(10);
 //				HAL_UART_Transmit(&huart1, (uint8_t *)"000000000000000", 15, 100);
 			}
 			else
 //				HAL_UART_Transmit(&huart1, (uint8_t *)"111111111111111", 15, 100);
-				vTaskDelay(10);
+				vTaskDelay(50);
 		}
 	}
 }

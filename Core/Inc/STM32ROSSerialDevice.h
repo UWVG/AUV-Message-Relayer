@@ -11,7 +11,7 @@
 #include "ROSSerialDevice.h"
 #include "usart.h"
 
-#define ROS_RX_BUFFER_SIZE 1024
+#define ROS_RX_BUFFER_SIZE 256
 
 class STM32ROSSerialDevice : public ROSSerialDevice {
 
