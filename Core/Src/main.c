@@ -249,9 +249,12 @@ void StartB30Task(void const * argument)
 	uint8_t ret;
 	for(;;)
 	{
+		printf("B30 RESET!!!!\n");
 		while((ret = B30_init()))
 		{
+			printf("hi2c1.state: %d\n", hi2c1.State);
 			printf("B30_init ret: %d\n", ret);
+			MX_I2C1_Init();
 			vTaskDelay(1000);
 		}
 		while(!B30_GetData(&b30_pressure, &b30_temperture))
@@ -322,7 +325,7 @@ void StartT30Task(void const * argument)
 			t30Publisher.publish(&var2);
 			if(!xTaskResumeAll())
 				taskYIELD();
-			printf("--------------------percent: %d\n", flag);
+//			printf("--------------------percent: %d\n", flag);
 			flag = 0;
 			dtime = 0;
 		}

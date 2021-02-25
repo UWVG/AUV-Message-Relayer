@@ -10,7 +10,7 @@
 #include "MS5837.h"
 #include "math.h"
 
-
+#define MAX_FLAG 10
 
 static uint32_t Cal_C[7];
 static int32_t dT,TEMP;
@@ -20,6 +20,7 @@ static int32_t OFFi=0,SENSi=0,Ti=0;
 static int64_t OFF2 = 0;
 static int64_t SENS2 = 0;
 static uint8_t MS5837_30BA_GetConversion(uint8_t command, uint32_t* conversion);
+static uint8_t flag = 0;
 
 double Temperature;
 int32_t Pressure;
@@ -37,11 +38,16 @@ extern void vTaskDelay(const uint32_t time);
 uint8_t MS5837_30BA_ReSet(void)
 {
 		uint8_t  data = MS5837_30BA_ResetCommand;
-		HAL_I2C_Master_Transmit_IT(&hi2c1, MS5837_30BA_WriteCommand, &data, 1);
+		HAL_I2C_Master_Transmit(&hi2c1, MS5837_30BA_WriteCommand, &data, 1, 10);
+		flag = 0;
 		while(hi2c1.State != HAL_I2C_STATE_READY)
 		{
 			vTaskDelay(5);
+			if(flag > MAX_FLAG)
+				return 1;
+			flag++;
 		}
+
 		return 0;
 }
 /*******************************************************************************
@@ -63,18 +69,26 @@ uint8_t MS5837_30BA_PROM(void)
 		for(int i = 0; i < 7; i++)
 		{
 			data[0] = MS5837_30BA_PROM_RD + (i*2);
-			if(HAL_I2C_Master_Transmit_IT(&hi2c1, MS5837_30BA_WriteCommand, data, 1))
+			if(HAL_I2C_Master_Transmit(&hi2c1, MS5837_30BA_WriteCommand, data, 1, 10))
 				return 2*i+1;
+			flag = 0;
 			while(hi2c1.State != HAL_I2C_STATE_READY)
 			{
 				vTaskDelay(5);
+				if(flag > MAX_FLAG)
+					return 1;
+				flag++;
 			}
 
-			if(HAL_I2C_Master_Receive_IT(&hi2c1, MS5837_30BA_ReadCommand, data, 2))
+			if(HAL_I2C_Master_Receive(&hi2c1, MS5837_30BA_ReadCommand, data, 2, 10))
 				return 2*i+2;
+			flag = 0;
 			while(hi2c1.State != HAL_I2C_STATE_READY)
 			{
 				vTaskDelay(5);
+				if(flag > MAX_FLAG)
+					return 1;
+				flag++;
 			}
 			inth = data[0];
 			intl = data[1];
@@ -94,36 +108,48 @@ uint8_t MS5837_30BA_GetConversion(uint8_t command,uint32_t* conversion)
 			uint8_t  temp[3];
 			data[0] = command;
 
-			if(HAL_I2C_Master_Transmit_IT(&hi2c1, MS5837_30BA_WriteCommand, data, 1))
+			if(HAL_I2C_Master_Transmit(&hi2c1, MS5837_30BA_WriteCommand, data, 1, 10))
 			{
 				return 1;
 			}
+			flag = 0;
 			do
 			{
 				vTaskDelay(1);
-				printf("assert1: %d\n", hi2c1.State);
+				if(flag > MAX_FLAG)
+					return 1;
+				flag++;
+//				printf("assert1: %d\n", hi2c1.State);
 			}while(hi2c1.State != HAL_I2C_STATE_READY);
 			vTaskDelay(10);
 
 			data[0] = 0;
-			if(HAL_I2C_Master_Transmit_IT(&hi2c1, MS5837_30BA_WriteCommand, data, 1))
+			if(HAL_I2C_Master_Transmit(&hi2c1, MS5837_30BA_WriteCommand, data, 1, 10))
 			{
 				return 2;
 			}
+			flag = 0;
 			do
 			{
 				vTaskDelay(1);
-				printf("assert2: %d\n", hi2c1.State);
+				if(flag > MAX_FLAG)
+					return 2;
+				flag++;
+//				printf("assert2: %d\n", hi2c1.State);
 			}while(hi2c1.State != HAL_I2C_STATE_READY);
 
 			if (HAL_I2C_Master_Receive_IT(&hi2c1, MS5837_30BA_ReadCommand, data, 3))
 			{
 				return 3;
 			}
+			flag = 0;
 			do
 			{
 				vTaskDelay(1);
-				printf("assert3: %d\n", hi2c1.State);
+				if(flag > MAX_FLAG)
+					return 3;
+				flag++;
+//				printf("assert3: %d\n", hi2c1.State);
 			}while(hi2c1.State != HAL_I2C_STATE_READY);
 
 			temp[0] = data[0];

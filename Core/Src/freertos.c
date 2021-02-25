@@ -131,8 +131,8 @@ void StartListInfoTask(void const * argument)
 	//		printf("任务�????????           任务状�??   优先�????????      剩余�????????   任务序号\r\n");
 		vTaskList((char *)&pcWriteBuffer);
 		for(int i=0;pcWriteBuffer[i];i++)
-//			;
-			HAL_UART_Transmit(&huart1, pcWriteBuffer+i, 1, 5);
+			;
+//			HAL_UART_Transmit(&huart1, pcWriteBuffer+i, 1, 5);
 
 		vTaskDelay(4000);
 		// Task code goes here.

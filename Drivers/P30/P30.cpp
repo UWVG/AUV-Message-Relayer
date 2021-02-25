@@ -262,7 +262,7 @@ ping_message* P30::read()
 				}
 				byte = readByte();
 		}
-		printf("----------error: %d\n", pingParser.errors);
+//		printf("----------error: %d\n", pingParser.errors);
 		return nullptr;
 }
 
