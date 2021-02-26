@@ -125,6 +125,7 @@ int main(void)
   nh.advertise(b30Publisher);
   nh.advertise(p30Publisher);
   nh.advertise(t30Publisher);
+  printf("SYS RESTART!\n");
 //  HAL_UART_Transmit(&huart1, (uint8_t*)"678910", 6, 5);
   xTaskCreate(	(TaskFunction_t)StartROSSerialTask,
 				"ROSSerial",	/*lint !e971 Unqualified char types are allowed for strings and single characters only. */
