@@ -27,7 +27,6 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
 #include "P30.h"
 #include "STM32P30Device.h"
 #include "ROSApi.h"
@@ -66,15 +65,15 @@ double 	b30_temperture;
 int32_t b30_pressure;
 STM32P30Device stm32P30Device;
 P30 p30( &stm32P30Device );
+extern "C"{
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
-/* USER CODE BEGIN PFP */
-
-extern "C"{
-#include "B30.h"
 void MX_FREERTOS_Init(void);
+/* USER CODE BEGIN PFP */
+#include "stdio.h"
+#include "B30.h"
 }
 void StartROSSerialTask(void const * argument);
 void StartB30Task(void const * argument);
@@ -116,46 +115,42 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_DMA_Init();
-  MX_USART1_UART_Init();
   MX_USART2_UART_Init();
   MX_USART3_UART_Init();
+  MX_UART4_Init();
   MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
   nh.initNode();
   nh.advertise(b30Publisher);
   nh.advertise(p30Publisher);
   nh.advertise(t30Publisher);
+#ifdef PRINT_DEBUG_INFORMATION
   printf("SYS RESTART!\n");
-//  HAL_UART_Transmit(&huart1, (uint8_t*)"678910", 6, 5);
+#endif
   xTaskCreate(	(TaskFunction_t)StartROSSerialTask,
-				"ROSSerial",	/*lint !e971 Unqualified char types are allowed for strings and single characters only. */
+				"ROSSerial",
 				100,
 				NULL,
 				5,
 				&xHandle);
   xTaskCreate(	(TaskFunction_t)StartB30Task,
-  				"B30",	/*lint !e971 Unqualified char types are allowed for strings and single characters only. */
+  				"B30",
   				300,
   				NULL,
   				3,
   				&xHandle1);
   xTaskCreate(	(TaskFunction_t)StartP30Task,
-				"P30",	/*lint !e971 Unqualified char types are allowed for strings and single characters only. */
+				"P30",
 				200,
 				NULL,
 				3,
 				&xHandle2);
   xTaskCreate(	(TaskFunction_t)StartT30Task,
- 				"T30",	/*lint !e971 Unqualified char types are allowed for strings and single characters only. */
+ 				"T30",
  				200,
  				NULL,
  				4,
  				&xHandle3);
-//  if(!xHandle)
-//  {
-//	  HAL_UART_Transmit(&huart1, (uint8_t*)"000000", 6, 5);
-//  }
-//  HAL_UART_Transmit(&huart1, (uint8_t*)"111111", 6, 5);
   /* USER CODE END 2 */
 
   /* Call init function for freertos objects (in freertos.c) */
@@ -173,25 +168,7 @@ int main(void)
     /* USER CODE BEGIN 3 */
 
 
-	 nh.spinOnce();
 
-//	  while(!p30.initialize(15))
-//	  {
-//		  HAL_Delay(2000);
-//	  }
-//	  //p30.request(PingEnumNamespace::PingMessageId::PING1D_PING_INTERVAL, 100);
-//	  //bool flag = p30.setPingInterval(50,1);
-////	  bool flag = p30.setPingEnable();
-////	  if(flag)
-////		  HAL_UART_Transmit(&huart1, (uint8_t*)"CC", 3, 100);
-//	  while(1)
-//	  {
-//
-//		  	  p30.waitMessage(PingEnumNamespace::PingMessageId::PING1D_MODE_AUTO, 100);
-//	  }
-	  //p30.update();
-	  //int t=HAL_GetTick();
-	  HAL_Delay(1000);
   }
   /* USER CODE END 3 */
 }
@@ -204,17 +181,23 @@ void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+  RCC_PeriphCLKInitTypeDef PeriphClkInitStruct = {0};
 
+  /** Supply configuration update enable
+  */
+  HAL_PWREx_ConfigSupply(PWR_LDO_SUPPLY);
+  /** Configure the main internal regulator output voltage
+  */
+  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE3);
+
+  while(!__HAL_PWR_GET_FLAG(PWR_FLAG_VOSRDY)) {}
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
-  RCC_OscInitStruct.HSEState = RCC_HSE_ON;
-  RCC_OscInitStruct.HSEPredivValue = RCC_HSE_PREDIV_DIV1;
-  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
-  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
-  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
-  RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL9;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
+  RCC_OscInitStruct.HSIState = RCC_HSI_DIV1;
+  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
+  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
     Error_Handler();
@@ -222,25 +205,37 @@ void SystemClock_Config(void)
   /** Initializes the CPU, AHB and APB buses clocks
   */
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
-                              |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
-  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
-  RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
-  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
-  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
+                              |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2
+                              |RCC_CLOCKTYPE_D3PCLK1|RCC_CLOCKTYPE_D1PCLK1;
+  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_HSI;
+  RCC_ClkInitStruct.SYSCLKDivider = RCC_SYSCLK_DIV1;
+  RCC_ClkInitStruct.AHBCLKDivider = RCC_HCLK_DIV1;
+  RCC_ClkInitStruct.APB3CLKDivider = RCC_APB3_DIV1;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_APB1_DIV1;
+  RCC_ClkInitStruct.APB2CLKDivider = RCC_APB2_DIV1;
+  RCC_ClkInitStruct.APB4CLKDivider = RCC_APB4_DIV1;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_0) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_USART3|RCC_PERIPHCLK_USART2
+                              |RCC_PERIPHCLK_UART4|RCC_PERIPHCLK_I2C1;
+  PeriphClkInitStruct.Usart234578ClockSelection = RCC_USART234578CLKSOURCE_D2PCLK1;
+  PeriphClkInitStruct.I2c123ClockSelection = RCC_I2C123CLKSOURCE_D2PCLK1;
+  if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK)
   {
     Error_Handler();
   }
 }
 
 /* USER CODE BEGIN 4 */
+
 void StartROSSerialTask(void const * argument)
 {
 	for(;;)
 	{
 		nh.spinOnce();
-//		HAL_UART_Transmit(&huart1, (uint8_t*)"11111", 5, 5);
 		vTaskDelay(5000);
 	}
 }
@@ -250,11 +245,15 @@ void StartB30Task(void const * argument)
 	uint8_t ret;
 	for(;;)
 	{
+#ifdef PRINT_DEBUG_INFORMATION
 		printf("B30 RESET!!!!\n");
+#endif
 		while((ret = B30_init()))
 		{
+#ifdef PRINT_DEBUG_INFORMATION
 			printf("hi2c1.state: %d\n", hi2c1.State);
 			printf("B30_init ret: %d\n", ret);
+#endif
 			MX_I2C1_Init();
 			vTaskDelay(1000);
 		}
@@ -280,17 +279,8 @@ void StartP30Task(void const * argument)
 		{
 
 		}
-//		stm32P30Device.init();
 		while(1)
 		{
-//			var2.data = HAL_GetTick();
-//						vTaskSuspendAll();
-//						t30Publisher.publish(&var2);
-//		//				printf("current time:%d",var2.data);
-//						if(!xTaskResumeAll())
-//							taskYIELD();
-//
-//						vTaskDelay(20);
 			msg=p30.read();
 			if(msg)
 			{
@@ -300,11 +290,8 @@ void StartP30Task(void const * argument)
 				p30Publisher.publish(&var1);
 				if(!xTaskResumeAll())
 					taskYIELD();
-//				vTaskDelay(10);
-//				HAL_UART_Transmit(&huart1, (uint8_t *)"000000000000000", 15, 100);
 			}
 			else
-//				HAL_UART_Transmit(&huart1, (uint8_t *)"111111111111111", 15, 100);
 				vTaskDelay(50);
 		}
 	}
@@ -317,16 +304,17 @@ void StartT30Task(void const * argument)
 	for(;;)
 	{
 		dtime += HAL_GetTick() - time;
-//		printf("dtime %d\n", dtime);
 		time   = HAL_GetTick();
 		if (dtime >= 1000)
 		{
-			var2.data = flag;
 			vTaskSuspendAll();
+			var2.data = flag;
 			t30Publisher.publish(&var2);
 			if(!xTaskResumeAll())
 				taskYIELD();
-//			printf("--------------------percent: %d\n", flag);
+#ifdef PRINT_DEBUG_INFORMATION
+			printf("--------------------percent: %d\n", flag);
+#endif
 			flag = 0;
 			dtime = 0;
 		}
@@ -371,7 +359,7 @@ void Error_Handler(void)
   __disable_irq();
   while (1)
   {
-	  HAL_UART_Transmit(&huart1, (uint8_t *)"Error_Handler\n", 14, 100);
+	  HAL_UART_Transmit(&huart3, (uint8_t *)"Error_Handler\n", 14, 100);
   }
   /* USER CODE END Error_Handler_Debug */
 }

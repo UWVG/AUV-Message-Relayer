@@ -27,8 +27,6 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "usart.h"
-#include "stdio.h"
-
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -48,8 +46,7 @@
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN Variables */
-uint8_t pcWriteBuffer[500];
-
+static uint8_t pcWriteBuffer[500];
 /* USER CODE END Variables */
 osThreadId ListInfoHandle;
 
@@ -126,17 +123,14 @@ void StartListInfoTask(void const * argument)
 {
   /* USER CODE BEGIN StartListInfoTask */
   /* Infinite loop */
-	for( ;; )
-	{
-	//		printf("任务�????????           任务状�??   优先�????????      剩余�????????   任务序号\r\n");
-		vTaskList((char *)&pcWriteBuffer);
-		for(int i=0;pcWriteBuffer[i];i++)
-			;
-//			HAL_UART_Transmit(&huart1, pcWriteBuffer+i, 1, 5);
-
-		vTaskDelay(4000);
-		// Task code goes here.
-	}
+  for(;;)
+  {
+	  vTaskList((char *)&pcWriteBuffer);
+	  for(int i=0;pcWriteBuffer[i];i++)
+//		  ;
+		  HAL_UART_Transmit(&huart3, pcWriteBuffer+i, 1, 5);
+	  vTaskDelay(4000);
+  }
   /* USER CODE END StartListInfoTask */
 }
 

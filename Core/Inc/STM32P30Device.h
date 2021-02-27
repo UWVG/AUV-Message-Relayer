@@ -10,37 +10,33 @@
 #include "P30Device.h"
 #include "usart.h"
 
-#define P30_RX_BUFFER_SIZE 256
+#define P30_RX_BUFFER_SIZE 128
 
 class STM32P30Device : public P30Device {
 public:
-	STM32P30Device(){};
+	STM32P30Device(){
+
+	};
 	virtual ~STM32P30Device(){};
 
 
 	static void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 	{
-
 			*(rx_buffer + write_index) = byte;
 			write_index = (write_index + 1)%P30_RX_BUFFER_SIZE;
 			count ++;
-//			if (HAL_OK != HAL_UART_Receive_IT(&huart3, &byte, 1))
-//			{
-//				HAL_UART_Transmit(&huart1, (uint8_t *)"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", 1, 100);
-//			}
-//			HAL_UART_Transmit(&huart1, &byte, 1, 10);
 	}
 
 	uint8_t init()
 	{
-		huart3.RxCpltCallback = HAL_UART_RxCpltCallback;
-		HAL_UART_Receive_DMA(&huart3, &byte, 1);
+		huart4.RxCpltCallback = HAL_UART_RxCpltCallback;
+		HAL_UART_Receive_DMA(&huart4, &byte, 1);
 		return 0;
 	}
 
 	size_t write(uint8_t* data, uint16_t length)
 	{
-			if(HAL_UART_Transmit(&huart3, data, length, 100))
+			if(HAL_UART_Transmit(&huart4, data, length, 100))
 				return 0;
 			return length;
 	}
@@ -53,15 +49,8 @@ public:
 			__disable_irq();
 			count --;
 			__enable_irq();
-//			HAL_UART_Transmit(&huart1, rx_buffer + read_index, 1, 100);
 			return *(rx_buffer + read_index);
 		}
-		else
-		{
-//			HAL_UART_Transmit(&huart1, (uint8_t *)&count, 2, 100);
-//			HAL_UART_Transmit(&huart1, (uint8_t *)&count, 2, 100);
-		}
-//		HAL_UART_Transmit(&huart1, (uint8_t*)"N", 1, 100);
 		return 256;
 	}
 

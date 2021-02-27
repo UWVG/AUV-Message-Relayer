@@ -11,7 +11,7 @@
 #define __MS5837_H_
 
 #include "i2c.h"
-#include "stm32f1xx_hal.h"
+#include "stm32h7xx_hal.h"
 
 
 

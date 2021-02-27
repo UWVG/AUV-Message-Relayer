@@ -7,7 +7,6 @@
 
 #include "P30.h"
 #include "usart.h"
-
 #ifdef USE_FREERTOS_DELAY
 extern "C"{
 void vTaskDelay(const uint32_t);
@@ -34,45 +33,39 @@ uint8_t P30::initialize(uint16_t ping_interval_ms)
 		}
 		while(!request(PingEnumNamespace::PingMessageId::PING1D_DEVICE_ID, 1000))
 		{
-//				return false;
 			P30_Delay(100);
 		}
 		HAL_Delay(100);
 		while(!request(PingEnumNamespace::PingMessageId::PING1D_FIRMWARE_VERSION, 1000))
 		{
-//				return false;
 			P30_Delay(100);
 		}
 		HAL_Delay(100);
 		while(!request(PingEnumNamespace::PingMessageId::PING1D_VOLTAGE_5, 1000))
 		{
-//				return false;
 			P30_Delay(100);
 		}
 		HAL_Delay(100);
 		while(!request(PingEnumNamespace::PingMessageId::PING1D_PROCESSOR_TEMPERATURE, 1000))
 		{
-//				return false;
 			P30_Delay(100);
 		}
 		P30_Delay(100);
 		while(!setPingInterval(ping_interval_ms,1))
 		{
-//				return false;
 			P30_Delay(100);
 		}
 		P30_Delay(100);
 //		if(!setPingEnable())
 //		{
-//				return false;
+//			P30_Delay(100);
 //		}
 //		if(!setModeAuto(1,1))
 //		{
-//				return false;
+//			P30_Delay(100);
 //		}
 		while(!setContinuousStart())
 		{
-//				return false;
 			P30_Delay(100);
 		}
 		return 0;
@@ -155,8 +148,6 @@ ping_message* P30::request(enum PingEnumNamespace::PingMessageId id,
         msg.set_id((uint16_t)id);
         msg.updateChecksum();
         write(msg.msgData, msg.msgDataLength());
-//        HAL_UART_Transmit(&huart1, (uint8_t*)"BB", 3, timeout_ms);
-//        HAL_UART_Transmit(&huart1, msg.msgData, msg.msgDataLength(), timeout_ms);
         ping_message* pmsg = waitMessage(id, timeout_ms);
         if(pmsg)
         {
@@ -171,7 +162,6 @@ bool P30::setPingInterval(uint16_t ping_interval, bool verify)
 		ping1d_set_ping_interval msg;
 		msg.set_ping_interval(ping_interval);
 		msg.updateChecksum();
-		//HAL_UART_Transmit(&huart1, msg.msgData, msg.msgDataLength(), 100);
 		write(msg.msgData, msg.msgDataLength());
 		waitMessage((enum PingEnumNamespace::PingMessageId) 1, 1000);
 		if(!request(PingEnumNamespace::PingMessageId::PING1D_PING_INTERVAL, 1000))
@@ -211,7 +201,6 @@ bool P30::setPingEnable()
 		msg.set_ping_enabled(1);
 		msg.updateChecksum();
 		write(msg.msgData, msg.msgDataLength());
-//		HAL_UART_Transmit(&huart1, msg.msgData, msg.msgDataLength(), 100);
 		if(waitMessage((enum PingEnumNamespace::PingMessageId) 1, 100))
 		{
 			return true;
@@ -226,7 +215,6 @@ bool P30::setContinuousStart()
 		msg.set_id(1211);
 		msg.updateChecksum();
 		write(msg.msgData, msg.msgDataLength());
-//		HAL_UART_Transmit(&huart1, msg.msgData, msg.msgDataLength(), 1000);
 		if(waitMessage((enum PingEnumNamespace::PingMessageId) 1, 1000))
 		{
 			return true;
@@ -237,7 +225,6 @@ bool P30::setContinuousStart()
 
 size_t P30::write(uint8_t* data, uint16_t length)
 {
-	//HAL_UART_Transmit(&huart1, data, length, 100);
 		return p30Device->write(data,length);
 }
 
@@ -254,15 +241,15 @@ ping_message* P30::read()
 		while(byte < 256)
 		{
 				res = pingParser.parseByte(byte);
-//				HAL_UART_Transmit(&huart1, (uint8_t *)&res, 1, 100);
-//				HAL_UART_Transmit(&huart1, (uint8_t *)&pingParser.errors, 4, 100);
 				if(res == PingParser::NEW_MESSAGE)
 				{
 					return &pingParser.rxMessage;
 				}
 				byte = readByte();
 		}
-//		printf("----------error: %d\n", pingParser.errors);
+#ifdef PRINT_DEBUG_INFORMATION
+		printf("----------ping praser error: %d\n", (int)pingParser.errors);
+#endif
 		return nullptr;
 }
 
@@ -278,8 +265,6 @@ ping_message* P30::waitMessage(enum PingEnumNamespace::PingMessageId id, uint16_
 					P30_Delay(20);
 					continue;
 				}
-//				HAL_UART_Transmit(&huart1, (uint8_t*)"AA", 3, 100);
-//				HAL_UART_Transmit(&huart1, pmsg->msgData, pmsg->msgDataLength(), 100);
 				return pmsg;
 		}
 		return nullptr;
