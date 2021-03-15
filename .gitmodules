@@ -4,3 +4,6 @@
 [submodule "Drivers/ROS_Serial/ros_lib"]
 	path = Drivers/ROS_Serial/ros_lib
 	url = git@github.com:UWVG/ros_lib
+[submodule "Drivers/BMP180/BMP180_driver"]
+	path = Drivers/BMP180/BMP180_driver
+	url = git@github.com:BoschSensortec/BMP180_driver

@@ -31,6 +31,12 @@
 #include "STM32P30Device.h"
 #include "ROSApi.h"
 #include "std_msgs/UInt32.h"
+#include "STM32BMP180Device.h"
+#include "BMP180Api.h"
+extern "C"{
+#include "stdio.h"
+#include "B30.h"
+}
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -54,16 +60,25 @@ ros::NodeHandle nh;
 std_msgs::UInt32 var;
 std_msgs::UInt32 var1;
 std_msgs::UInt32 var2;
+std_msgs::UInt32 var3;
+std_msgs::UInt32 var4;
 ros::Publisher b30Publisher("B30",&var);
 ros::Publisher p30Publisher("P30",&var1);
 ros::Publisher t30Publisher("T30",&var2);
-TaskHandle_t xHandle = NULL;
+ros::Publisher prePublisher("pre",&var3);
+ros::Publisher temPublisher("tem",&var4);
+TaskHandle_t xHandle  = NULL;
 TaskHandle_t xHandle1 = NULL;
 TaskHandle_t xHandle2 = NULL;
 TaskHandle_t xHandle3 = NULL;
-double 	b30_temperture;
-int32_t b30_pressure;
-STM32P30Device stm32P30Device;
+TaskHandle_t xHandle4 = NULL;
+double              b30_temperture;
+int32_t             b30_pressure;
+STM32P30Device      stm32P30Device;
+STM32BMP180Device   stm32BMP180Device;
+BMP180Api			bmp180Api{&stm32BMP180Device,0xee};
+BMP180Result        bmp180Result;
+
 P30 p30( &stm32P30Device );
 extern "C"{
 /* USER CODE END PV */
@@ -72,13 +87,12 @@ extern "C"{
 void SystemClock_Config(void);
 void MX_FREERTOS_Init(void);
 /* USER CODE BEGIN PFP */
-#include "stdio.h"
-#include "B30.h"
 }
 void StartROSSerialTask(void const * argument);
 void StartB30Task(void const * argument);
 void StartP30Task(void const * argument);
 void StartT30Task(void const * argument);
+void StartBMP180Task(void const * argument);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -119,11 +133,14 @@ int main(void)
   MX_USART3_UART_Init();
   MX_UART4_Init();
   MX_I2C1_Init();
+  MX_I2C2_Init();
   /* USER CODE BEGIN 2 */
   nh.initNode();
   nh.advertise(b30Publisher);
   nh.advertise(p30Publisher);
   nh.advertise(t30Publisher);
+  nh.advertise(prePublisher);
+  nh.advertise(temPublisher);
 #ifdef PRINT_DEBUG_INFORMATION
   printf("SYS RESTART!\n");
 #endif
@@ -151,6 +168,12 @@ int main(void)
  				NULL,
  				4,
  				&xHandle3);
+  xTaskCreate(	(TaskFunction_t)StartBMP180Task,
+   				"BMP180",
+   				200,
+   				NULL,
+   				3,
+   				&xHandle4);
   /* USER CODE END 2 */
 
   /* Call init function for freertos objects (in freertos.c) */
@@ -220,7 +243,8 @@ void SystemClock_Config(void)
     Error_Handler();
   }
   PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_USART3|RCC_PERIPHCLK_USART2
-                              |RCC_PERIPHCLK_UART4|RCC_PERIPHCLK_I2C1;
+                              |RCC_PERIPHCLK_UART4|RCC_PERIPHCLK_I2C2
+                              |RCC_PERIPHCLK_I2C1;
   PeriphClkInitStruct.Usart234578ClockSelection = RCC_USART234578CLKSOURCE_D2PCLK1;
   PeriphClkInitStruct.I2c123ClockSelection = RCC_I2C123CLKSOURCE_D2PCLK1;
   if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK)
@@ -236,7 +260,7 @@ void StartROSSerialTask(void const * argument)
 	for(;;)
 	{
 		nh.spinOnce();
-		vTaskDelay(5000);
+		vTaskDelay(10);
 	}
 }
 
@@ -323,6 +347,30 @@ void StartT30Task(void const * argument)
 			flag ++;
 		}
 		vTaskDelay(10);
+	}
+}
+
+void StartBMP180Task(void const * argument)
+{
+
+	for(;;)
+	{
+		while(bmp180Api.init())
+		{
+			vTaskDelay(1000);
+		}
+		do
+		{
+			bmp180Result = bmp180Api.GetTemAndPre();
+			vTaskSuspendAll();
+			var3.data = bmp180Result.pressure;
+			var4.data = bmp180Result.temperature;
+			prePublisher.publish(&var3);
+			temPublisher.publish(&var4);
+			if(!xTaskResumeAll())
+				taskYIELD();
+			vTaskDelay(500);
+		}while(1);
 	}
 }
 /* USER CODE END 4 */
