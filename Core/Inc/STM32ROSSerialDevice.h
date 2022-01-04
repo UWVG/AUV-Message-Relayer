@@ -32,8 +32,8 @@ public:
 	 */
 	virtual int init()
 	{
-		huart2.RxCpltCallback = HAL_UART_RxCpltCallback;
-		HAL_UART_Receive_DMA(&huart2, &byte, 1);
+		huart7.RxCpltCallback = HAL_UART_RxCpltCallback;
+		HAL_UART_Receive_DMA(&huart7, &byte, 1);
 		return 0;
 	}
 	/**
@@ -72,7 +72,7 @@ public:
 	 */
 	virtual int write(uint8_t* data, uint16_t length)
 	{
-		if(HAL_UART_Transmit(&huart2, data, length, 100))
+		if(HAL_UART_Transmit(&huart7, data, length, 100))
 			return 0;
 		return length;
 	}

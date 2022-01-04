@@ -39,13 +39,13 @@ extern void vTaskDelay(const uint32_t time);
 uint8_t MS5837_30BA_ReSet(void)
 {
 		uint8_t  data = MS5837_30BA_ResetCommand;
-		if (HAL_OK != HAL_I2C_Master_Transmit(&hi2c1, MS5837_30BA_WriteCommand, &data, 1, 10))
+		if (HAL_OK != HAL_I2C_Master_Transmit(&hi2c2, MS5837_30BA_WriteCommand, &data, 1, 10))
 		{
 			printf("hi2c1 tx failed\n");
 			return 1;
 		}
 		flag = 0;
-		while(hi2c1.State != HAL_I2C_STATE_READY)
+		while(hi2c2.State != HAL_I2C_STATE_READY)
 		{
 			vTaskDelay(5);
 			if(flag > MAX_FLAG)
@@ -75,12 +75,12 @@ uint8_t MS5837_30BA_PROM(void)
 		{
 			data[0] = MS5837_30BA_PROM_RD + (i*2);
 
-			if ( HAL_OK != HAL_I2C_Master_Transmit(&hi2c1, MS5837_30BA_WriteCommand, data, 1, 10) )
+			if ( HAL_OK != HAL_I2C_Master_Transmit(&hi2c2, MS5837_30BA_WriteCommand, data, 1, 10) )
 			{
 				return 2*i+1;
 			}
 			flag = 0;
-			while(hi2c1.State != HAL_I2C_STATE_READY)
+			while(hi2c2.State != HAL_I2C_STATE_READY)
 			{
 				vTaskDelay(5);
 				if(flag > MAX_FLAG)
@@ -88,12 +88,12 @@ uint8_t MS5837_30BA_PROM(void)
 				flag++;
 			}
 
-			if ( HAL_OK != HAL_I2C_Master_Receive(&hi2c1, MS5837_30BA_ReadCommand, data, 2, 10) )
+			if ( HAL_OK != HAL_I2C_Master_Receive(&hi2c2, MS5837_30BA_ReadCommand, data, 2, 10) )
 			{
 				return 2*i+2;
 			}
 			flag = 0;
-			while(hi2c1.State != HAL_I2C_STATE_READY)
+			while(hi2c2.State != HAL_I2C_STATE_READY)
 			{
 				vTaskDelay(5);
 				if(flag > MAX_FLAG)
@@ -119,7 +119,7 @@ uint8_t MS5837_30BA_GetConversion(uint8_t command,uint32_t* conversion)
 			uint8_t  temp[3];
 			data[0] = command;
 
-			if(HAL_I2C_Master_Transmit(&hi2c1, MS5837_30BA_WriteCommand, data, 1, 10))
+			if(HAL_I2C_Master_Transmit(&hi2c2, MS5837_30BA_WriteCommand, data, 1, 10))
 			{
 				return 1;
 			}
@@ -131,11 +131,11 @@ uint8_t MS5837_30BA_GetConversion(uint8_t command,uint32_t* conversion)
 					return 1;
 				flag++;
 //				printf("assert1: %d\n", hi2c1.State);
-			}while(hi2c1.State != HAL_I2C_STATE_READY);
+			}while(hi2c2.State != HAL_I2C_STATE_READY);
 			vTaskDelay(10);
 
 			data[0] = 0;
-			if(HAL_I2C_Master_Transmit(&hi2c1, MS5837_30BA_WriteCommand, data, 1, 10))
+			if(HAL_I2C_Master_Transmit(&hi2c2, MS5837_30BA_WriteCommand, data, 1, 10))
 			{
 				return 2;
 			}
@@ -147,9 +147,9 @@ uint8_t MS5837_30BA_GetConversion(uint8_t command,uint32_t* conversion)
 					return 2;
 				flag++;
 //				printf("assert2: %d\n", hi2c1.State);
-			}while(hi2c1.State != HAL_I2C_STATE_READY);
+			}while(hi2c2.State != HAL_I2C_STATE_READY);
 
-			if (HAL_I2C_Master_Receive_IT(&hi2c1, MS5837_30BA_ReadCommand, data, 3))
+			if (HAL_I2C_Master_Receive_IT(&hi2c2, MS5837_30BA_ReadCommand, data, 3))
 			{
 				return 3;
 			}
@@ -161,7 +161,7 @@ uint8_t MS5837_30BA_GetConversion(uint8_t command,uint32_t* conversion)
 					return 3;
 				flag++;
 //				printf("assert3: %d\n", hi2c1.State);
-			}while(hi2c1.State != HAL_I2C_STATE_READY);
+			}while(hi2c2.State != HAL_I2C_STATE_READY);
 
 			temp[0] = data[0];
 			temp[1] = data[1];

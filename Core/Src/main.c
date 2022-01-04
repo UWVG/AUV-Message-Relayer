@@ -22,6 +22,7 @@
 #include "cmsis_os.h"
 #include "dma.h"
 #include "i2c.h"
+#include "tim.h"
 #include "usart.h"
 #include "gpio.h"
 
@@ -50,7 +51,20 @@ extern "C"{
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
-
+void pwmCallback(const std_msgs::UInt32& a)
+{
+	if((a.data>270) || (a.data<0))
+	{
+		printf("D_pwm ERROR");
+	}
+	else
+	{
+		int b;
+		b = (a.data/270)*2000+500;
+		printf("%ld\n __D_pwm__\r\n",a.data);
+		__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, b);
+	}
+}
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
@@ -62,16 +76,19 @@ std_msgs::UInt32 var1;
 std_msgs::UInt32 var2;
 std_msgs::UInt32 var3;
 std_msgs::UInt32 var4;
+
 ros::Publisher b30Publisher("B30",&var);
 ros::Publisher p30Publisher("P30",&var1);
 ros::Publisher t30Publisher("T30",&var2);
 ros::Publisher prePublisher("pre",&var3);
 ros::Publisher temPublisher("tem",&var4);
+ros::Subscriber<std_msgs::UInt32> D_pwmSubscriber("/D_pwm",pwmCallback);
 TaskHandle_t xHandle  = NULL;
 TaskHandle_t xHandle1 = NULL;
 TaskHandle_t xHandle2 = NULL;
 TaskHandle_t xHandle3 = NULL;
 TaskHandle_t xHandle4 = NULL;
+TaskHandle_t xHandle5 = NULL;
 double              b30_temperture;
 int32_t             b30_pressure;
 STM32P30Device      stm32P30Device;
@@ -93,6 +110,7 @@ void StartB30Task(void const * argument);
 void StartP30Task(void const * argument);
 void StartT30Task(void const * argument);
 void StartBMP180Task(void const * argument);
+void StartDJTask(void const * argument);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -129,11 +147,13 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_DMA_Init();
-  MX_USART2_UART_Init();
   MX_USART3_UART_Init();
-  MX_UART4_Init();
-  MX_I2C1_Init();
   MX_I2C2_Init();
+  MX_USART6_UART_Init();
+  MX_USART1_UART_Init();
+  MX_UART7_Init();
+  MX_TIM2_Init();
+  MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
   nh.initNode();
   nh.advertise(b30Publisher);
@@ -141,39 +161,44 @@ int main(void)
   nh.advertise(t30Publisher);
   nh.advertise(prePublisher);
   nh.advertise(temPublisher);
+  nh.subscribe(D_pwmSubscriber);
 #ifdef PRINT_DEBUG_INFORMATION
-  printf("SYS RESTART!\n");
+  printf("SYS RESTART!\r\n");
 #endif
-  xTaskCreate(	(TaskFunction_t)StartROSSerialTask,
-				"ROSSerial",
-				100,
-				NULL,
-				5,
-				&xHandle);
-  xTaskCreate(	(TaskFunction_t)StartB30Task,
-  				"B30",
-  				300,
-  				NULL,
-  				3,
-  				&xHandle1);
-  xTaskCreate(	(TaskFunction_t)StartP30Task,
-				"P30",
-				200,
-				NULL,
-				3,
-				&xHandle2);
-  xTaskCreate(	(TaskFunction_t)StartT30Task,
- 				"T30",
- 				200,
- 				NULL,
- 				4,
- 				&xHandle3);
-  xTaskCreate(	(TaskFunction_t)StartBMP180Task,
-   				"BMP180",
-   				200,
-   				NULL,
-   				3,
-   				&xHandle4);
+//  xTaskCreate(	(TaskFunction_t)StartROSSerialTask,
+//				"ROSSerial",
+//				1000,
+//				NULL,
+//				5,
+//				&xHandle);
+//  xTaskCreate(	(TaskFunction_t)StartB30Task,
+//  				"B30",
+//  				300,
+//  				NULL,
+//  				3,
+//  				&xHandle1);
+//  xTaskCreate(	(TaskFunction_t)StartP30Task,
+//				"P30",
+//				200,
+//				NULL,
+//				3,
+//				&xHandle2);
+//  xTaskCreate(	(TaskFunction_t)StartT30Task,
+// 				"T30",
+// 				200,
+// 				NULL,
+// 				4,
+// 				&xHandle3);
+//  xTaskCreate(	(TaskFunction_t)StartBMP180Task,
+//   				"BMP180",
+//   				200,
+//   				NULL,
+//   				3,
+//   				&xHandle4);
+//  xTaskCreate( (TaskFunction_t)StartDJTask, "DJ1", 300, NULL, 3, &xHandle5);
+  HAL_TIM_Base_Start_IT(&htim3);
+  HAL_TIM_PWM_Start_IT(&htim3,TIM_CHANNEL_1);
+//  __HAL_TIM_SetCompare(&htim3,TIM_CHANNEL_1,1000);
   /* USER CODE END 2 */
 
   /* Call init function for freertos objects (in freertos.c) */
@@ -204,7 +229,6 @@ void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
-  RCC_PeriphCLKInitTypeDef PeriphClkInitStruct = {0};
 
   /** Supply configuration update enable
   */
@@ -234,20 +258,11 @@ void SystemClock_Config(void)
   RCC_ClkInitStruct.SYSCLKDivider = RCC_SYSCLK_DIV1;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_HCLK_DIV1;
   RCC_ClkInitStruct.APB3CLKDivider = RCC_APB3_DIV1;
-  RCC_ClkInitStruct.APB1CLKDivider = RCC_APB1_DIV1;
-  RCC_ClkInitStruct.APB2CLKDivider = RCC_APB2_DIV1;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_APB1_DIV2;
+  RCC_ClkInitStruct.APB2CLKDivider = RCC_APB2_DIV2;
   RCC_ClkInitStruct.APB4CLKDivider = RCC_APB4_DIV1;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_0) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_USART3|RCC_PERIPHCLK_USART2
-                              |RCC_PERIPHCLK_UART4|RCC_PERIPHCLK_I2C2
-                              |RCC_PERIPHCLK_I2C1;
-  PeriphClkInitStruct.Usart234578ClockSelection = RCC_USART234578CLKSOURCE_D2PCLK1;
-  PeriphClkInitStruct.I2c123ClockSelection = RCC_I2C123CLKSOURCE_D2PCLK1;
-  if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK)
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_1) != HAL_OK)
   {
     Error_Handler();
   }
@@ -270,21 +285,21 @@ void StartB30Task(void const * argument)
 	for(;;)
 	{
 #ifdef PRINT_DEBUG_INFORMATION
-		printf("B30 RESET!!!!\n");
+		printf("B30 RESET!!!!\r\n");
 #endif
 		while((ret = B30_init()))
 		{
 #ifdef PRINT_DEBUG_INFORMATION
-			printf("hi2c1.state: %d\n", hi2c1.State);
+			printf("hi2c1.state: %d\n", hi2c2.State);
 			printf("B30_init ret: %d\n", ret);
 #endif
-			MX_I2C1_Init();
+			MX_I2C2_Init();
 			vTaskDelay(1000);
 		}
 		while(!B30_GetData(&b30_pressure, &b30_temperture))
 		{
 			var.data = b30_pressure;
-
+			printf("b30 %d\r\n",b30_pressure);
 			vTaskSuspendAll();
 			b30Publisher.publish(&var);
 			if(!xTaskResumeAll())
@@ -310,6 +325,7 @@ void StartP30Task(void const * argument)
 			{
 				p30.handleMessage(msg);
 				var1.data = p30._distance;
+				printf("p30_distance:%d\r\n",p30._distance);
 				vTaskSuspendAll();
 				p30Publisher.publish(&var1);
 				if(!xTaskResumeAll())
@@ -373,9 +389,22 @@ void StartBMP180Task(void const * argument)
 		}while(1);
 	}
 }
+
+//void StartDJTask(void const * argument)
+//{
+//	for(;;)
+//	{
+//		int b = (60/270)*2000+500;
+//		vTaskSuspendAll();
+//		__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, b);
+//		if(!xTaskResumeAll())
+//			taskYIELD();
+//		vTaskDelay(500);
+//	}
+//}
 /* USER CODE END 4 */
 
- /**
+/**
   * @brief  Period elapsed callback in non blocking mode
   * @note   This function is called  when TIM1 interrupt took place, inside
   * HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to increment

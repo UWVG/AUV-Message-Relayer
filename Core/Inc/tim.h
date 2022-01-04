@@ -1,8 +1,8 @@
 /**
   ******************************************************************************
-  * @file    i2c.h
+  * @file    tim.h
   * @brief   This file contains all the function prototypes for
-  *          the i2c.c file
+  *          the tim.c file
   ******************************************************************************
   * @attention
   *
@@ -17,8 +17,8 @@
   ******************************************************************************
   */
 /* Define to prevent recursive inclusion -------------------------------------*/
-#ifndef __I2C_H__
-#define __I2C_H__
+#ifndef __TIM_H__
+#define __TIM_H__
 
 #ifdef __cplusplus
 extern "C" {
@@ -31,13 +31,17 @@ extern "C" {
 
 /* USER CODE END Includes */
 
-extern I2C_HandleTypeDef hi2c2;
+extern TIM_HandleTypeDef htim2;
+extern TIM_HandleTypeDef htim3;
 
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */
 
-void MX_I2C2_Init(void);
+void MX_TIM2_Init(void);
+void MX_TIM3_Init(void);
+
+void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
 
 /* USER CODE BEGIN Prototypes */
 
@@ -47,6 +51,6 @@ void MX_I2C2_Init(void);
 }
 #endif
 
-#endif /* __I2C_H__ */
+#endif /* __TIM_H__ */
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
