@@ -32,6 +32,7 @@
 #include "STM32P30Device.h"
 #include "ROSApi.h"
 #include "std_msgs/UInt32.h"
+#include "std_msgs/Float32.h"
 #include "STM32BMP180Device.h"
 #include "BMP180Api.h"
 extern "C"{
@@ -51,19 +52,48 @@ extern "C"{
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
-void pwmCallback(const std_msgs::UInt32& a)
+void PRCallback(const std_msgs::Float32& msg)
 {
-	if((a.data>270) || (a.data<0))
+	printf("get /D_pwm data = %f\r\n", msg.data);
+	double a;
+	if(msg.data>270)
 	{
-		printf("D_pwm ERROR");
+		a = 270;
+	}
+	else if (msg.data<0)
+	{
+		a = 0;
 	}
 	else
 	{
-		int b;
-		b = (a.data/270)*2000+500;
-		printf("%ld\n __D_pwm__\r\n",a.data);
-		__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, b);
+		a = msg.data;
 	}
+	int b;
+	b = (a/270)*2000+500;
+	printf("%f\n __D_pwm__\r\n",a);
+	__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, b);
+
+}
+
+void PropCallback(const std_msgs::Float32& msg)
+{
+//	double a;
+//	if(msg.data>4)
+//	{
+//		a = 4;
+//	}
+//	else if (msg.data<-2.6)
+//	{
+//		a = -2.6;
+//	}
+//	else
+//	{
+//		a = msg.data;
+//	}
+//	int b;
+//	b = (a/270)*4000+500;
+//	printf("%ld\n __D_pwm__\r\n",msg.data);
+//	__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, b);
 }
 /* USER CODE END PM */
 
@@ -76,19 +106,18 @@ std_msgs::UInt32 var1;
 std_msgs::UInt32 var2;
 std_msgs::UInt32 var3;
 std_msgs::UInt32 var4;
-
 ros::Publisher b30Publisher("B30",&var);
 ros::Publisher p30Publisher("P30",&var1);
 ros::Publisher t30Publisher("T30",&var2);
 ros::Publisher prePublisher("pre",&var3);
 ros::Publisher temPublisher("tem",&var4);
-ros::Subscriber<std_msgs::UInt32> D_pwmSubscriber("/D_pwm",pwmCallback);
+ros::Subscriber<std_msgs::Float32> D_pwmSubscriber("/D_pwm",PRCallback);
+ros::Subscriber<std_msgs::Float32> P_pwmSubscriber("/P_pwm",PropCallback);
 TaskHandle_t xHandle  = NULL;
 TaskHandle_t xHandle1 = NULL;
 TaskHandle_t xHandle2 = NULL;
 TaskHandle_t xHandle3 = NULL;
 TaskHandle_t xHandle4 = NULL;
-TaskHandle_t xHandle5 = NULL;
 double              b30_temperture;
 int32_t             b30_pressure;
 STM32P30Device      stm32P30Device;
@@ -162,15 +191,16 @@ int main(void)
   nh.advertise(prePublisher);
   nh.advertise(temPublisher);
   nh.subscribe(D_pwmSubscriber);
+  nh.subscribe(P_pwmSubscriber);
 #ifdef PRINT_DEBUG_INFORMATION
-  printf("SYS RESTART!\r\n");
+  printf("SYS RESTART!\n");
 #endif
-//  xTaskCreate(	(TaskFunction_t)StartROSSerialTask,
-//				"ROSSerial",
-//				1000,
-//				NULL,
-//				5,
-//				&xHandle);
+  xTaskCreate(	(TaskFunction_t)StartROSSerialTask,
+				"ROSSerial",
+				1000,
+				NULL,
+				5,
+				&xHandle);
 //  xTaskCreate(	(TaskFunction_t)StartB30Task,
 //  				"B30",
 //  				300,
@@ -195,10 +225,16 @@ int main(void)
 //   				NULL,
 //   				3,
 //   				&xHandle4);
-//  xTaskCreate( (TaskFunction_t)StartDJTask, "DJ1", 300, NULL, 3, &xHandle5);
-  HAL_TIM_Base_Start_IT(&htim3);
-  HAL_TIM_PWM_Start_IT(&htim3,TIM_CHANNEL_1);
-//  __HAL_TIM_SetCompare(&htim3,TIM_CHANNEL_1,1000);
+  HAL_TIM_Base_Start_IT(&htim2);
+  HAL_TIM_PWM_Start_IT(&htim2,TIM_CHANNEL_1);
+//  HAL_TIM_PWM_Start(&htim2,TIM_CHANNEL_1);
+//  int i;
+//  for(i=0;i<=3999;i++)
+//  {
+//	  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, i);
+//  }
+
+//  HAL_TIM_PWM_Start_IT(&htim2,TIM_CHANNEL_2);
   /* USER CODE END 2 */
 
   /* Call init function for freertos objects (in freertos.c) */
@@ -285,7 +321,7 @@ void StartB30Task(void const * argument)
 	for(;;)
 	{
 #ifdef PRINT_DEBUG_INFORMATION
-		printf("B30 RESET!!!!\r\n");
+		printf("B30 RESET!!!!\n");
 #endif
 		while((ret = B30_init()))
 		{
@@ -299,7 +335,7 @@ void StartB30Task(void const * argument)
 		while(!B30_GetData(&b30_pressure, &b30_temperture))
 		{
 			var.data = b30_pressure;
-			printf("b30 %d\r\n",b30_pressure);
+			printf("b30 %d\n",b30_pressure);
 			vTaskSuspendAll();
 			b30Publisher.publish(&var);
 			if(!xTaskResumeAll())
@@ -325,7 +361,7 @@ void StartP30Task(void const * argument)
 			{
 				p30.handleMessage(msg);
 				var1.data = p30._distance;
-				printf("p30_distance:%d\r\n",p30._distance);
+				printf("p30_distance:%d\n",p30._distance);
 				vTaskSuspendAll();
 				p30Publisher.publish(&var1);
 				if(!xTaskResumeAll())
@@ -389,19 +425,6 @@ void StartBMP180Task(void const * argument)
 		}while(1);
 	}
 }
-
-//void StartDJTask(void const * argument)
-//{
-//	for(;;)
-//	{
-//		int b = (60/270)*2000+500;
-//		vTaskSuspendAll();
-//		__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, b);
-//		if(!xTaskResumeAll())
-//			taskYIELD();
-//		vTaskDelay(500);
-//	}
-//}
 /* USER CODE END 4 */
 
 /**
