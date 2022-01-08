@@ -29,14 +29,14 @@ public:
 
 	uint8_t init()
 	{
-		huart4.RxCpltCallback = HAL_UART_RxCpltCallback;
-		HAL_UART_Receive_DMA(&huart4, &byte, 1);
+		huart1.RxCpltCallback = HAL_UART_RxCpltCallback;
+		HAL_UART_Receive_DMA(&huart1, &byte, 1);
 		return 0;
 	}
 
 	size_t write(uint8_t* data, uint16_t length)
 	{
-			if(HAL_UART_Transmit(&huart4, data, length, 100))
+			if(HAL_UART_Transmit(&huart1, data, length, 100))
 				return 0;
 			return length;
 	}

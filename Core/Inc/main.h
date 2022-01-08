@@ -58,6 +58,16 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
+#define H7_LED1_Pin GPIO_PIN_1
+#define H7_LED1_GPIO_Port GPIOG
+#define H7_LED2_Pin GPIO_PIN_7
+#define H7_LED2_GPIO_Port GPIOE
+#define StepMotorPlus__Pin GPIO_PIN_2
+#define StepMotorPlus__GPIO_Port GPIOD
+#define SME_Pin GPIO_PIN_3
+#define SME_GPIO_Port GPIOD
+#define SM_Pin GPIO_PIN_4
+#define SM_GPIO_Port GPIOD
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */
