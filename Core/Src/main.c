@@ -52,9 +52,14 @@ extern "C"{
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
+int8_t Ini_Pst=0; // if Pst is initialed
+double Pst; // last time position of step motor
+int Nsw; // nuber of square wave
+
 void PRCallback(const std_msgs::Float32& msg)
 {
-	printf("get /D_pwm data = %f\r\n", msg.data);
+//	printf("get /D_pwm data = %f\r\n", msg.data);
+	//-----
 	double a;
 	if(msg.data>270)
 	{
@@ -70,30 +75,64 @@ void PRCallback(const std_msgs::Float32& msg)
 	}
 	int b;
 	b = (a/270)*2000+500;
-	printf("%f\n __D_pwm__\r\n",a);
+//	printf("%f\n __D_pwm__\r\n",a);
+	//-----b = msg.data
 	__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, b);
 
 }
 
 void PropCallback(const std_msgs::Float32& msg)
 {
-//	double a;
-//	if(msg.data>4)
-//	{
-//		a = 4;
-//	}
-//	else if (msg.data<-2.6)
-//	{
-//		a = -2.6;
-//	}
-//	else
-//	{
-//		a = msg.data;
-//	}
-//	int b;
-//	b = (a/270)*4000+500;
-//	printf("%ld\n __D_pwm__\r\n",msg.data);
-//	__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, b);
+	//-----
+	double a;
+	if(msg.data>4)
+	{
+		a = 4;
+	}
+	else if (msg.data<-2.6)
+	{
+		a = -2.6;
+	}
+	else
+	{
+		a = msg.data;
+	}
+	int b;
+	b = (a/6.6)*1000+1000;
+	printf("get P_pwm=%f output=%f \r\n",msg.data, a);
+	//-----b = msg.data
+	__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, b);
+}
+
+void SMCallback(const std_msgs::Float32& msg)
+{
+	double Psa, Dp; //aim step motor position , distance between Psa and Pst
+	if(!Ini_Pst)
+	{
+		Pst = msg.data;
+		Ini_Pst = 1;
+	}
+	else
+	{
+		Psa = msg.data;
+		Dp = Psa - Pst;
+		if(Dp>0)
+		{
+			HAL_GPIO_WritePin(SM_GPIO_Port, SM_Pin, GPIO_PIN_SET);
+		}
+		else
+		{
+			HAL_GPIO_WritePin(SM_GPIO_Port, SM_Pin, GPIO_PIN_RESET);
+		}
+		Pst = Psa;
+		Nsw = Dp *2000;
+		HAL_TIM_PWM_Start_IT(&htim2,TIM_CHANNEL_3);
+	}
+}
+
+void WECallback(const std_msgs::Float32& msg)
+{
+
 }
 /* USER CODE END PM */
 
@@ -113,6 +152,8 @@ ros::Publisher prePublisher("pre",&var3);
 ros::Publisher temPublisher("tem",&var4);
 ros::Subscriber<std_msgs::Float32> D_pwmSubscriber("/D_pwm",PRCallback);
 ros::Subscriber<std_msgs::Float32> P_pwmSubscriber("/P_pwm",PropCallback);
+ros::Subscriber<std_msgs::Float32> S_pwmSubscriber("/S_pwm",SMCallback);
+ros::Subscriber<std_msgs::Float32> W_pwmSubscriber("/W_pwm",WECallback);
 TaskHandle_t xHandle  = NULL;
 TaskHandle_t xHandle1 = NULL;
 TaskHandle_t xHandle2 = NULL;
@@ -182,7 +223,6 @@ int main(void)
   MX_USART1_UART_Init();
   MX_UART7_Init();
   MX_TIM2_Init();
-  MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
   nh.initNode();
   nh.advertise(b30Publisher);
@@ -192,6 +232,8 @@ int main(void)
   nh.advertise(temPublisher);
   nh.subscribe(D_pwmSubscriber);
   nh.subscribe(P_pwmSubscriber);
+  nh.subscribe(S_pwmSubscriber);
+  nh.subscribe(W_pwmSubscriber);
 #ifdef PRINT_DEBUG_INFORMATION
   printf("SYS RESTART!\n");
 #endif
@@ -226,8 +268,12 @@ int main(void)
 //   				3,
 //   				&xHandle4);
   HAL_TIM_Base_Start_IT(&htim2);
+//  HAL_TIM_Base_Start_IT(&htim3);
   HAL_TIM_PWM_Start_IT(&htim2,TIM_CHANNEL_1);
-//  HAL_TIM_PWM_Start(&htim2,TIM_CHANNEL_1);
+  HAL_TIM_PWM_Start_IT(&htim2,TIM_CHANNEL_2);
+//  HAL_TIM_PWM_Start_IT(&htim2,TIM_CHANNEL_3);
+  HAL_TIM_PWM_Start_IT(&htim2,TIM_CHANNEL_4);
+  HAL_GPIO_WritePin(GPIOD, SME_Pin, GPIO_PIN_SET);
 //  int i;
 //  for(i=0;i<=3999;i++)
 //  {
@@ -423,6 +469,18 @@ void StartBMP180Task(void const * argument)
 				taskYIELD();
 			vTaskDelay(500);
 		}while(1);
+	}
+}
+
+void HAL_TIM_PWM_PulseFinishedCallback(TIM_HandleTypeDef *htim)
+{
+	uint32_t pwm_count = 0;
+	if(htim->Instance == TIM2)
+	{
+		if((++pwm_count) >= Nsw)
+		{
+			HAL_TIM_PWM_Stop_IT(&htim2, TIM_CHANNEL_3);
+		}
 	}
 }
 /* USER CODE END 4 */
