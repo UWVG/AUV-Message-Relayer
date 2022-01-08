@@ -33,6 +33,7 @@
 #include "ROSApi.h"
 #include "std_msgs/UInt32.h"
 #include "std_msgs/Float32.h"
+#include "std_msgs/Int32.h"
 #include "STM32BMP180Device.h"
 #include "BMP180Api.h"
 extern "C"{
@@ -52,10 +53,8 @@ extern "C"{
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
-int8_t Ini_Pst=0; // if Pst is initialed
-double Pst; // last time position of step motor
-int Nsw; // nuber of square wave
-
+uint32_t	posOfStepMotor = 0; // last time position of step motor
+uint32_t	exptPosOfStepMotor = 0;
 void PRCallback(const std_msgs::Float32& msg)
 {
 //	printf("get /D_pwm data = %f\r\n", msg.data);
@@ -104,35 +103,15 @@ void PropCallback(const std_msgs::Float32& msg)
 	__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, b);
 }
 
-void SMCallback(const std_msgs::Float32& msg)
-{
-	double Psa, Dp; //aim step motor position , distance between Psa and Pst
-	if(!Ini_Pst)
-	{
-		Pst = msg.data;
-		Ini_Pst = 1;
-	}
-	else
-	{
-		Psa = msg.data;
-		Dp = Psa - Pst;
-		if(Dp>0)
-		{
-			HAL_GPIO_WritePin(SM_GPIO_Port, SM_Pin, GPIO_PIN_SET);
-		}
-		else
-		{
-			HAL_GPIO_WritePin(SM_GPIO_Port, SM_Pin, GPIO_PIN_RESET);
-		}
-		Pst = Psa;
-		Nsw = Dp *2000;
-		HAL_TIM_PWM_Start_IT(&htim2,TIM_CHANNEL_3);
-	}
-}
 
 void WECallback(const std_msgs::Float32& msg)
 {
 
+}
+
+void StepMotorCallback(const std_msgs::Int32 &msg)
+{
+	exptPosOfStepMotor = msg.data;
 }
 /* USER CODE END PM */
 
@@ -150,10 +129,10 @@ ros::Publisher p30Publisher("P30",&var1);
 ros::Publisher t30Publisher("T30",&var2);
 ros::Publisher prePublisher("pre",&var3);
 ros::Publisher temPublisher("tem",&var4);
-ros::Subscriber<std_msgs::Float32> D_pwmSubscriber("/D_pwm",PRCallback);
-ros::Subscriber<std_msgs::Float32> P_pwmSubscriber("/P_pwm",PropCallback);
-ros::Subscriber<std_msgs::Float32> S_pwmSubscriber("/S_pwm",SMCallback);
-ros::Subscriber<std_msgs::Float32> W_pwmSubscriber("/W_pwm",WECallback);
+ros::Subscriber<std_msgs::Float32>	D_pwmSubscriber("/D_pwm",PRCallback);
+ros::Subscriber<std_msgs::Float32> 	P_pwmSubscriber("/P_pwm",PropCallback);
+ros::Subscriber<std_msgs::Float32> 	W_pwmSubscriber("/W_pwm",WECallback);
+ros::Subscriber<std_msgs::Int32> 	StepMotorSubscriber("/StepMotor",StepMotorCallback);
 TaskHandle_t xHandle  = NULL;
 TaskHandle_t xHandle1 = NULL;
 TaskHandle_t xHandle2 = NULL;
@@ -223,6 +202,7 @@ int main(void)
   MX_USART1_UART_Init();
   MX_UART7_Init();
   MX_TIM2_Init();
+  MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
   nh.initNode();
   nh.advertise(b30Publisher);
@@ -232,8 +212,8 @@ int main(void)
   nh.advertise(temPublisher);
   nh.subscribe(D_pwmSubscriber);
   nh.subscribe(P_pwmSubscriber);
-  nh.subscribe(S_pwmSubscriber);
   nh.subscribe(W_pwmSubscriber);
+  nh.subscribe(StepMotorSubscriber);
 #ifdef PRINT_DEBUG_INFORMATION
   printf("SYS RESTART!\n");
 #endif
@@ -273,6 +253,7 @@ int main(void)
   HAL_TIM_PWM_Start_IT(&htim2,TIM_CHANNEL_2);
 //  HAL_TIM_PWM_Start_IT(&htim2,TIM_CHANNEL_3);
   HAL_TIM_PWM_Start_IT(&htim2,TIM_CHANNEL_4);
+  HAL_TIM_Base_Start_IT(&htim3);
   HAL_GPIO_WritePin(GPIOD, SME_Pin, GPIO_PIN_SET);
 //  int i;
 //  for(i=0;i<=3999;i++)
@@ -472,17 +453,6 @@ void StartBMP180Task(void const * argument)
 	}
 }
 
-void HAL_TIM_PWM_PulseFinishedCallback(TIM_HandleTypeDef *htim)
-{
-	uint32_t pwm_count = 0;
-	if(htim->Instance == TIM2)
-	{
-		if((++pwm_count) >= Nsw)
-		{
-			HAL_TIM_PWM_Stop_IT(&htim2, TIM_CHANNEL_3);
-		}
-	}
-}
 /* USER CODE END 4 */
 
 /**
@@ -496,13 +466,45 @@ void HAL_TIM_PWM_PulseFinishedCallback(TIM_HandleTypeDef *htim)
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
   /* USER CODE BEGIN Callback 0 */
-
+  static int8_t StepMotorOutputStatus = 0;
   /* USER CODE END Callback 0 */
   if (htim->Instance == TIM1) {
     HAL_IncTick();
   }
   /* USER CODE BEGIN Callback 1 */
+  if (htim->Instance == TIM3)
+  {
+	  if(posOfStepMotor != exptPosOfStepMotor)
+	  {
+		  if (StepMotorOutputStatus)
+		  {
+			  HAL_GPIO_WritePin(StepMotorPlus__GPIO_Port,StepMotorPlus__Pin,(GPIO_PinState)0);
+			  StepMotorOutputStatus = 0;
+			  if(exptPosOfStepMotor > posOfStepMotor)
+			  {
+				  posOfStepMotor++;
+			  }
+			  else
+			  {
+				  posOfStepMotor--;
+			  }
+		  }
+		  else
+		  {
+			  if(exptPosOfStepMotor > posOfStepMotor)
+			  {
+				  HAL_GPIO_WritePin(SM_GPIO_Port,SM_Pin,(GPIO_PinState)1);
+			  }
+			  else
+			  {
+				  HAL_GPIO_WritePin(SM_GPIO_Port,SM_Pin,(GPIO_PinState)0);
+			  }
+			  HAL_GPIO_WritePin(StepMotorPlus__GPIO_Port,StepMotorPlus__Pin,(GPIO_PinState)1);
+			  StepMotorOutputStatus = 1;
+		  }
+	  }
 
+  }
   /* USER CODE END Callback 1 */
 }
 
